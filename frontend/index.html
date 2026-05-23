@@ -594,7 +594,6 @@ function renderPosts() {
 }
 
 async function deletePost(id) {
-  if (!confirm('Delete this post?')) return;
   await api('DELETE', `/api/posts/${id}`);
   await loadPosts();
 }
@@ -865,7 +864,6 @@ async function toggleSlot(id, enabled) {
 }
 
 async function deleteSlot(id) {
-  if (!confirm('Remove this slot?')) return;
   await api('DELETE', `/api/slots/${id}`);
   await loadSlots();
   loadSlotsForCompose();
