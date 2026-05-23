@@ -11,7 +11,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         return reply.status(500).send({ error: 'OWNER_PASSWORD_HASH not configured' });
       }
       const ok = await bcrypt.compare(req.body.password, config.ownerPasswordHash);
-      if (!ok) return reply.status(401).send({ error: 'Invalid password' });
+      if (!ok) return reply.status(400).send({ error: 'Invalid password' });
       req.session.authenticated = true;
       return { ok: true };
     },
