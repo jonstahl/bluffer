@@ -12,7 +12,7 @@
 
 <!-- Login screen -->
 <div id="login-screen" class="min-h-screen flex items-center justify-center bg-[#f3f2ef]">
-  <div class="bg-white border border-gray-200 rounded-xl p-8 w-[360px] shadow-lg">
+  <div class="bg-white border border-gray-200 border-t-4 border-t-li rounded-xl p-8 w-[360px] shadow-xl">
     <h1 class="text-2xl font-bold text-li mb-6 text-center">Bluffer</h1>
     <div class="form-row mb-4">
       <label>Password</label>
@@ -29,7 +29,7 @@
     ⚠ LinkedIn token expires soon. <a href="/auth/linkedin">Reconnect now →</a>
   </div>
 
-  <header class="bg-li text-white px-5 flex items-center justify-between h-[52px] sticky top-0 z-[100]">
+  <header class="bg-gradient-to-r from-li to-li-dark text-white px-5 flex items-center justify-between h-[52px] sticky top-0 z-[100] shadow-md">
     <h1 class="text-lg font-bold tracking-tight">Bluffer</h1>
     <nav class="flex gap-3 items-center">
       <a data-view="queue" class="active">Queue</a>
@@ -326,11 +326,12 @@ function renderPosts() {
       : ACTIVE.includes(p.status) && (!statusFilter || p.status === statusFilter)
   );
   if (!posts.length) {
-    list.innerHTML = `<li class="empty-state">${state.activeSubtab === 'history' ? 'No history yet.' : 'Queue is empty.'}</li>`;
+    const msg = state.activeSubtab === 'history' ? 'No history yet.' : 'Queue is empty.';
+    list.innerHTML = `<li class="empty-state"><div class="text-4xl mb-2">📭</div><div>${msg}</div></li>`;
     return;
   }
   list.innerHTML = posts.map(p => `
-    <li class="post-item" data-id="${p.id}"${['queued','scheduled'].includes(p.status) ? ' draggable="true"' : ''}>
+    <li class="post-item" data-id="${p.id}" data-status="${p.status}"${['queued','scheduled'].includes(p.status) ? ' draggable="true"' : ''}>
       <div class="post-item-header">
         ${['queued','scheduled'].includes(p.status) ? '<span class="drag-handle" title="Drag to reorder">⠿</span>' : ''}
         <span class="status-badge status-${p.status}">${p.status}</span>
@@ -607,7 +608,7 @@ async function loadSlots() {
 function renderSlots() {
   const list = document.getElementById('slots-list');
   if (!state.slots.length) {
-    list.innerHTML = '<li class="empty-state">No slots yet.</li>';
+    list.innerHTML = '<li class="empty-state"><div class="text-4xl mb-2">🗓</div><div>No slots yet. Add one below.</div></li>';
     return;
   }
   list.innerHTML = state.slots.map(s => {

@@ -49,14 +49,15 @@
   /* ── Layout ────────────────────────────────────────────────────────────── */
 
   .card {
-    @apply bg-white border border-gray-200 rounded-lg p-5 mb-4;
+    @apply bg-white border border-gray-200 rounded-xl p-5 mb-4 shadow-sm;
   }
 
   /* ── Navigation ────────────────────────────────────────────────────────── */
 
   header nav a {
-    @apply text-sm px-2 py-1 rounded cursor-pointer transition-colors no-underline;
+    @apply text-sm px-2 py-1 rounded cursor-pointer no-underline;
     color: rgba(255,255,255,.82);
+    transition: background-color 0.15s, color 0.15s;
   }
   header nav a:hover { color: #fff; background: rgba(255,255,255,.15); }
   header nav a.active { color: #fff; background: rgba(255,255,255,.2); }
@@ -64,13 +65,13 @@
   /* ── Buttons ───────────────────────────────────────────────────────────── */
 
   .btn-primary {
-    @apply cursor-pointer border-0 rounded px-4 py-2 text-sm font-semibold transition-colors bg-li text-white;
+    @apply cursor-pointer border-0 rounded-full px-5 py-2 text-sm font-semibold transition-colors bg-li text-white;
     font-family: inherit;
   }
   .btn-primary:hover { @apply bg-li-dark; }
 
   .btn-ghost {
-    @apply cursor-pointer rounded px-4 py-2 text-sm font-semibold transition-colors bg-transparent text-li;
+    @apply cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold transition-colors bg-transparent text-li;
     border: 1.5px solid #0a66c2;
     font-family: inherit;
   }
@@ -102,14 +103,25 @@
   /* ── Post list items ───────────────────────────────────────────────────── */
 
   .post-item {
-    @apply bg-white border border-gray-200 rounded-lg px-4 py-3.5 mb-2.5;
+    @apply bg-white border border-gray-200 rounded-xl px-4 py-3.5 mb-3 shadow-sm;
+    border-left-width: 4px;
+    transition: box-shadow 0.15s;
   }
+  .post-item:hover    { @apply shadow-md; }
   .post-item.dragging  { @apply opacity-30; }
   .post-item.drag-over { border-top: 2.5px solid #0a66c2; }
 
+  /* Status accent left border */
+  .post-item[data-status="draft"]       { border-left-color: #d1d5db; }
+  .post-item[data-status="queued"]      { border-left-color: #3b82f6; }
+  .post-item[data-status="scheduled"]   { border-left-color: #10b981; }
+  .post-item[data-status="publishing"]  { border-left-color: #f59e0b; }
+  .post-item[data-status="published"]   { border-left-color: #10b981; }
+  .post-item[data-status="failed"]      { border-left-color: #ef4444; }
+
   .post-item-header  { @apply flex items-center gap-2 mb-2; }
-  .post-item-body    { @apply text-sm text-gray-900 leading-relaxed mb-2; }
-  .post-item-meta    { @apply text-xs text-gray-500 flex gap-3 flex-wrap items-center; }
+  .post-item-body    { @apply text-gray-900 leading-relaxed mb-2; font-size: 15px; }
+  .post-item-meta    { @apply text-gray-400 flex gap-3 flex-wrap items-center; font-size: 11px; }
   .post-item-actions { @apply mt-2.5 flex gap-2; }
 
   .drag-handle {
@@ -182,7 +194,7 @@
   #edit-modal-backdrop.open { display: flex; }
 
   #edit-modal {
-    @apply bg-white rounded-lg p-6 overflow-y-auto;
+    @apply bg-white rounded-xl p-6 overflow-y-auto;
     width: min(560px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     box-shadow: 0 8px 40px rgba(0,0,0,.25);
@@ -190,7 +202,7 @@
 
   /* ── Misc ──────────────────────────────────────────────────────────────── */
 
-  .empty-state { @apply text-center text-gray-500 py-10 text-sm; }
+  .empty-state { @apply text-center text-gray-400 py-12 text-sm; }
   .error-msg   { @apply text-red-700 text-xs mt-1.5; }
 
   #bookmarklet-code {
