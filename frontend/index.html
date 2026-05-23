@@ -130,6 +130,15 @@
     .status-published { background: #d1fae5; color: var(--success); }
     .status-failed    { background: #fee2e2; color: var(--danger); }
 
+    .subtabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+    .subtab {
+      background: none; border: none; border-bottom: 2.5px solid transparent;
+      margin-bottom: -2px; padding: 8px 16px; font-size: 14px; font-weight: 600;
+      color: var(--muted); cursor: pointer; font-family: inherit;
+    }
+    .subtab.active { color: var(--li); border-bottom-color: var(--li); }
+    .subtab:hover:not(.active) { color: var(--text); }
+
     #posts-list { list-style: none; }
     .post-item {
       background: var(--card);
@@ -295,14 +304,16 @@
 
     <!-- Queue view -->
     <div id="view-queue" class="view active">
+      <div class="subtabs">
+        <button class="subtab active" data-subtab="active">Queue</button>
+        <button class="subtab" data-subtab="history">History</button>
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <select id="filter-status" style="width:160px;padding:6px">
-          <option value="">All posts</option>
+          <option value="">All</option>
           <option value="draft">Drafts</option>
           <option value="queued">Queued</option>
           <option value="scheduled">Scheduled</option>
-          <option value="published">Published</option>
-          <option value="failed">Failed</option>
         </select>
         <button class="btn-ghost btn-sm" id="refresh-btn">Refresh</button>
       </div>
@@ -490,6 +501,7 @@ let state = {
   slots: [],
   status: null,
   ownerTimezone: 'America/Chicago',
+  activeSubtab: 'active',
 };
 
 async function api(method, path, body) {
@@ -555,9 +567,7 @@ async function loadAll() {
 // ── Posts ─────────────────────────────────────────────────────────────────────
 
 async function loadPosts() {
-  const status = document.getElementById('filter-status').value;
-  const url = status ? `/api/posts?status=${status}` : '/api/posts';
-  const r = await api('GET', url);
+  const r = await api('GET', '/api/posts');
   if (!r) return;
   state.posts = r.data;
   renderPosts();
@@ -565,11 +575,21 @@ async function loadPosts() {
 
 function renderPosts() {
   const list = document.getElementById('posts-list');
-  if (!state.posts.length) {
-    list.innerHTML = '<li class="empty-state">No posts yet.</li>';
+  const ACTIVE = ['draft', 'queued', 'scheduled', 'publishing'];
+  const isHistory = state.activeSubtab === 'history';
+  const filterEl = document.getElementById('filter-status');
+  filterEl.style.visibility = isHistory ? 'hidden' : 'visible';
+  const statusFilter = filterEl.value;
+  const posts = state.posts.filter(p =>
+    isHistory
+      ? !ACTIVE.includes(p.status)
+      : ACTIVE.includes(p.status) && (!statusFilter || p.status === statusFilter)
+  );
+  if (!posts.length) {
+    list.innerHTML = `<li class="empty-state">${state.activeSubtab === 'history' ? 'No history yet.' : 'Queue is empty.'}</li>`;
     return;
   }
-  list.innerHTML = state.posts.map(p => `
+  list.innerHTML = posts.map(p => `
     <li class="post-item" data-id="${p.id}"${['queued','scheduled'].includes(p.status) ? ' draggable="true"' : ''}>
       <div class="post-item-header">
         ${['queued','scheduled'].includes(p.status) ? '<span class="drag-handle" title="Drag to reorder">⠿</span>' : ''}
@@ -762,7 +782,15 @@ document.getElementById('edit-save-btn').onclick = async () => {
   }
 };
 
-document.getElementById('filter-status').onchange = loadPosts;
+document.querySelectorAll('.subtab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.subtab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.activeSubtab = btn.dataset.subtab;
+    renderPosts();
+  });
+});
+document.getElementById('filter-status').onchange = renderPosts;
 document.getElementById('refresh-btn').onclick = loadPosts;
 
 // ── Compose ───────────────────────────────────────────────────────────────────
