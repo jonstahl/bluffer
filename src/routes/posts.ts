@@ -44,7 +44,7 @@ type CreateBody = {
 
 type PatchBody = Partial<
   Pick<Post, 'commentary' | 'status' | 'scheduled_for' | 'slot_id' | 'source_url' | 'source_urn'>
-> & { queue?: boolean };
+> & { queue?: boolean; post_now?: boolean };
 
 function takenScheduledTimes(db: ReturnType<typeof getDb>, excludeId?: number): Set<string> {
   const rows = db.prepare(
@@ -177,7 +177,11 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
       }
 
       // Apply scheduling
-      if (req.body.queue) {
+      if (req.body.post_now) {
+        updates.status = 'scheduled';
+        updates.scheduled_for = new Date().toISOString();
+        updates.slot_id = null;
+      } else if (req.body.queue) {
         const slots = db.prepare('SELECT * FROM schedule_slots WHERE enabled = 1').all() as Slot[];
         const taken = takenScheduledTimes(db, id);
         const open = findEarliestOpenSlot(slots, taken);
@@ -197,6 +201,8 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
         const sets = Object.keys(updates).map(k => `${k} = ?`).join(', ');
         db.prepare(`UPDATE posts SET ${sets} WHERE id = ?`).run(...Object.values(updates), id);
       }
+
+      if (req.body.post_now) void processScheduled();
 
       return db.prepare('SELECT * FROM posts WHERE id = ?').get(id);
     },

@@ -216,6 +216,13 @@
           <input type="datetime-local" id="edit-datetime">
         </div>
         <label class="schedule-opt">
+          <input type="radio" name="edit-when" value="now">
+          <div class="schedule-opt-body">
+            <strong>Post it now!</strong>
+            <span>Publish immediately</span>
+          </div>
+        </label>
+        <label class="schedule-opt">
           <input type="radio" name="edit-when" value="draft">
           <div class="schedule-opt-body">
             <strong>Save as draft</strong>
@@ -521,7 +528,9 @@ document.getElementById('edit-save-btn').onclick = async () => {
     body.source_url = document.getElementById('edit-source-url').value.trim() || null;
   }
 
-  if (when === 'queue') {
+  if (when === 'now') {
+    body.post_now = true;
+  } else if (when === 'queue') {
     body.queue = true;
   } else if (when === 'schedule') {
     const dt = document.getElementById('edit-datetime').value;
