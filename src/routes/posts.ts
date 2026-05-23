@@ -170,6 +170,47 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  // Reorder queued/scheduled posts by redistributing their scheduled_for times.
+  // ids = full list of visible post IDs in desired order; only posts that have
+  // a scheduled_for are affected — their times are reassigned to preserve the
+  // slot sequence while matching the new position order.
+  app.post<{ Body: { ids: number[] } }>(
+    '/api/posts/reorder',
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return reply.status(400).send({ error: 'ids must be a non-empty array' });
+      }
+
+      const db = getDb();
+      const placeholders = ids.map(() => '?').join(',');
+
+      // Fetch posts that have a scheduled_for, sorted by current time ascending
+      const scheduled = db.prepare(
+        `SELECT id, scheduled_for, slot_id FROM posts
+         WHERE id IN (${placeholders}) AND scheduled_for IS NOT NULL
+         ORDER BY scheduled_for ASC`,
+      ).all(...ids) as { id: number; scheduled_for: string; slot_id: number | null }[];
+
+      // The time slots in ascending order (what we'll redistribute)
+      const times = scheduled.map(p => ({ scheduled_for: p.scheduled_for, slot_id: p.slot_id }));
+
+      // Posts from `ids` that have a scheduled_for, in the user's requested order
+      const scheduledIdSet = new Set(scheduled.map(p => p.id));
+      const reorderedIds = ids.filter(id => scheduledIdSet.has(id));
+
+      const update = db.prepare('UPDATE posts SET scheduled_for = ?, slot_id = ? WHERE id = ?');
+      db.transaction(() => {
+        reorderedIds.forEach((id, i) => {
+          update.run(times[i].scheduled_for, times[i].slot_id, id);
+        });
+      })();
+
+      return { ok: true };
+    },
+  );
+
   app.delete<{ Params: { id: string } }>(
     '/api/posts/:id',
     { preHandler: requireAuth },

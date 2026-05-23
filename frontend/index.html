@@ -144,6 +144,18 @@
     .post-item-meta { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
     .post-item-actions { margin-top: 10px; display: flex; gap: 8px; }
 
+    .drag-handle {
+      cursor: grab;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1;
+      padding: 0 2px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .post-item.dragging { opacity: .35; }
+    .post-item.drag-over { border-top: 2.5px solid var(--li); }
+
     #slots-list { list-style: none; }
     .slot-item {
       display: flex;
@@ -550,8 +562,9 @@ function renderPosts() {
     return;
   }
   list.innerHTML = state.posts.map(p => `
-    <li class="post-item" data-id="${p.id}">
+    <li class="post-item" data-id="${p.id}"${['queued','scheduled'].includes(p.status) ? ' draggable="true"' : ''}>
       <div class="post-item-header">
+        ${['queued','scheduled'].includes(p.status) ? '<span class="drag-handle" title="Drag to reorder">⠿</span>' : ''}
         <span class="status-badge status-${p.status}">${p.status}</span>
         <span class="kind">${p.kind}</span>
       </div>
@@ -564,6 +577,7 @@ function renderPosts() {
       </div>
       <div class="post-item-actions">
         ${['draft','queued','scheduled','failed'].includes(p.status) ? `<button class="btn-ghost btn-sm" onclick="openEditModal(${p.id})">Edit</button>` : ''}
+        ${['queued','scheduled'].includes(p.status) ? `<button class="btn-ghost btn-sm" onclick="bumpPost(${p.id})">Bump it!</button>` : ''}
         ${p.status === 'failed' ? `<button class="btn-ghost btn-sm" onclick="reschedulePost(${p.id})">Retry</button>` : ''}
         ${['draft','queued','scheduled','failed'].includes(p.status) ? `<button class="btn-danger btn-sm" onclick="deletePost(${p.id})">Delete</button>` : ''}
       </div>
@@ -581,6 +595,67 @@ async function reschedulePost(id) {
   await api('PATCH', `/api/posts/${id}`, { status: 'scheduled', scheduled_for: new Date(Date.now() + 60000).toISOString() });
   await loadPosts();
 }
+
+async function reorderPosts(ids) {
+  const r = await api('POST', '/api/posts/reorder', { ids });
+  if (r && r.ok) await loadPosts();
+}
+
+async function bumpPost(id) {
+  const items = [...document.querySelectorAll('#posts-list .post-item')];
+  const ids = items.map(el => parseInt(el.dataset.id, 10));
+  const idx = ids.indexOf(id);
+  if (idx <= 0) return;
+  ids.splice(idx, 1);
+  ids.unshift(id);
+  await reorderPosts(ids);
+}
+
+// ── Drag-and-drop reorder ─────────────────────────────────────────────────────
+
+let dragSrcId = null;
+
+const postsList = document.getElementById('posts-list');
+
+postsList.addEventListener('dragstart', e => {
+  const item = e.target.closest('.post-item[draggable]');
+  if (!item) return;
+  dragSrcId = parseInt(item.dataset.id, 10);
+  item.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+
+postsList.addEventListener('dragend', () => {
+  document.querySelectorAll('#posts-list .post-item.dragging, #posts-list .post-item.drag-over')
+    .forEach(el => el.classList.remove('dragging', 'drag-over'));
+  dragSrcId = null;
+});
+
+postsList.addEventListener('dragover', e => {
+  e.preventDefault();
+  const item = e.target.closest('.post-item[draggable]');
+  document.querySelectorAll('#posts-list .post-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  if (item && parseInt(item.dataset.id, 10) !== dragSrcId) item.classList.add('drag-over');
+});
+
+postsList.addEventListener('drop', e => {
+  e.preventDefault();
+  const target = e.target.closest('.post-item[draggable]');
+  document.querySelectorAll('#posts-list .post-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  if (!target || dragSrcId === null) return;
+  const targetId = parseInt(target.dataset.id, 10);
+  if (targetId === dragSrcId) return;
+
+  const ids = [...postsList.querySelectorAll('.post-item')].map(el => parseInt(el.dataset.id, 10));
+  const srcIdx = ids.indexOf(dragSrcId);
+  if (srcIdx === -1) return;
+  ids.splice(srcIdx, 1);
+  const tgtIdx = ids.indexOf(targetId);
+  if (tgtIdx === -1) return;
+  ids.splice(tgtIdx, 0, dragSrcId);
+
+  reorderPosts(ids);
+});
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
 
