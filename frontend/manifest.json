@@ -1,0 +1,9 @@
+{
+  "name": "Bluffer",
+  "short_name": "Bluffer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f2ef",
+  "theme_color": "#0a66c2",
+  "icons": []
+}

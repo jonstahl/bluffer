@@ -1,0 +1,32 @@
+app = "bluffer"
+primary_region = "sea"
+
+[build]
+
+[env]
+  PORT     = "3000"
+  HOST     = "0.0.0.0"
+  DB_PATH  = "/data/bluffer.db"
+  APP_BASE_URL = "https://bluffer.fly.dev"
+
+# Critical: keep the machine warm so the scheduler fires on time.
+# Never scale to >1 — SQLite volume is pinned to one machine.
+[http_service]
+  internal_port       = 3000
+  force_https         = true
+  auto_stop_machines  = false
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+[[vm]]
+  cpu_kind  = "shared"
+  cpus      = 1
+  memory_mb = 512
+
+[[mounts]]
+  source      = "bluffer_data"
+  destination = "/data"

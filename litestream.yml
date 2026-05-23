@@ -1,0 +1,11 @@
+dbs:
+  - path: ${DB_PATH}
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_S3_BUCKET}
+        path: bluffer/db
+        region: ${LITESTREAM_S3_REGION}
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        # For non-AWS S3-compatible storage (e.g. Backblaze, Tigris), set:
+        # endpoint: ${LITESTREAM_S3_ENDPOINT}
