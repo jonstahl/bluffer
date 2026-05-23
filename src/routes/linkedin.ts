@@ -12,7 +12,8 @@ const USERINFO_URL = 'https://api.linkedin.com/v2/userinfo';
 export async function linkedinRoutes(app: FastifyInstance): Promise<void> {
   app.get('/auth/linkedin', { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
     const state = randomUUID();
-    req.session.oauth_state = state;
+    req.session.set('oauth_state', state);
+    await req.session.save();
 
     const redirectUri = `${config.appBaseUrl}/auth/linkedin/callback`;
     const params = new URLSearchParams({
@@ -35,10 +36,10 @@ export async function linkedinRoutes(app: FastifyInstance): Promise<void> {
         return reply.redirect(`/?li_error=${encodeURIComponent(error_description ?? error)}`);
       }
 
-      if (!state || state !== req.session.oauth_state) {
+      if (!state || state !== req.session.get('oauth_state')) {
         return reply.status(400).send({ error: 'Invalid OAuth state — possible CSRF' });
       }
-      req.session.oauth_state = undefined;
+      req.session.set('oauth_state', undefined);
 
       if (!code) return reply.status(400).send({ error: 'Missing code' });
 
@@ -101,7 +102,8 @@ export async function linkedinRoutes(app: FastifyInstance): Promise<void> {
         memberUrn,
       );
 
-      req.session.authenticated = true;
+      req.session.set('authenticated', true);
+      await req.session.save();
       return reply.redirect('/?connected=1');
     },
   );

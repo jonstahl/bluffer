@@ -12,7 +12,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
       const ok = await bcrypt.compare(req.body.password, config.ownerPasswordHash);
       if (!ok) return reply.status(400).send({ error: 'Invalid password' });
-      req.session.authenticated = true;
+      req.session.set('authenticated', true);
+      await req.session.save();
       return { ok: true };
     },
   );
@@ -24,7 +25,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 }
 
 export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Promise<void> {
-  if (!req.session.authenticated) {
+  if (!req.session.get('authenticated')) {
     reply.status(401).send({ error: 'Unauthorized' });
   }
 }
