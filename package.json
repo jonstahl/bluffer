@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "dotenv -e .env -- tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "playwright test"
   },
   "dependencies": {
     "@fastify/cookie": "^9.4.0",
@@ -19,6 +20,7 @@
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.14.10",

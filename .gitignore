@@ -6,3 +6,6 @@ dist/
 .env
 .env.local
 *.local
+tests/.auth.json
+test-results/
+playwright-report/
