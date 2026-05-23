@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
-import fastifySession from '@fastify/session';
+import { fastifySession } from '@fastify/session';
 import fastifyCors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import fastifyFormbody from '@fastify/formbody';
@@ -43,7 +43,7 @@ app.register(fastifySession, {
     sameSite: 'lax',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  saveUninitialized: false,
+  saveUninitialized: true,
 });
 app.register(fastifyFormbody);
 
