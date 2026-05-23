@@ -1,5 +1,20 @@
 # Notes — Future Ideas & Research
 
+## Per-post engagement stats in History
+
+**Blocked — requires LinkedIn Partner API access.**
+
+Tested live on 2026-05-23: `/rest/socialActions/{postUrn}` returns:
+```
+403 ACCESS_DENIED: Not enough permissions to access: partnerApiSocialActions.GET.20260501
+```
+
+All engagement data (likes, comments, reposts, impressions, views) requires LinkedIn Marketing Developer Platform partner access. Standard OAuth scopes (`w_member_social`, `openid profile`) cannot access any of it.
+
+This feature is only viable if Bluffer becomes a LinkedIn-approved partner product.
+
+---
+
 ## Tagging people in posts
 
 LinkedIn's Posts API requires a person's **URN** (`urn:li:person:XXXXXXXX`) to tag them — it doesn't parse `@Name` strings. Mentions are structured annotations in the API payload, not free text.

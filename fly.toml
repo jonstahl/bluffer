@@ -1,32 +1,35 @@
-app = "bluffer"
-primary_region = "sea"
+# fly.toml app configuration file generated for bluffer on 2026-05-23T09:36:19-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'bluffer'
+primary_region = 'sjc'
 
 [build]
 
 [env]
-  PORT     = "3000"
-  HOST     = "0.0.0.0"
-  DB_PATH  = "/data/bluffer.db"
-  APP_BASE_URL = "https://bluffer.fly.dev"
+  APP_BASE_URL = 'https://bluffer.fly.dev'
+  DB_PATH = '/data/bluffer.db'
+  HOST = '0.0.0.0'
+  PORT = '3000'
 
-# Critical: keep the machine warm so the scheduler fires on time.
-# Never scale to >1 — SQLite volume is pinned to one machine.
+[[mounts]]
+  source = 'bluffer_data'
+  destination = '/data'
+
 [http_service]
-  internal_port       = 3000
-  force_https         = true
-  auto_stop_machines  = false
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'off'
   min_machines_running = 1
 
   [http_service.concurrency]
-    type       = "requests"
-    soft_limit = 200
+    type = 'requests'
     hard_limit = 250
+    soft_limit = 200
 
 [[vm]]
-  cpu_kind  = "shared"
-  cpus      = 1
+  cpu_kind = 'shared'
+  cpus = 1
   memory_mb = 512
-
-[[mounts]]
-  source      = "bluffer_data"
-  destination = "/data"

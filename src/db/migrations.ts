@@ -1,9 +1,6 @@
 import type Database from 'better-sqlite3';
 
 export function runMigrations(db: Database.Database): void {
-  // Add stats column if not present (idempotent)
-  try { db.exec(`ALTER TABLE posts ADD COLUMN stats TEXT`); } catch { /* already exists */ }
-
   db.exec(`
     CREATE TABLE IF NOT EXISTS posts (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
