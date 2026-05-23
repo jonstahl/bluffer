@@ -489,6 +489,7 @@ let state = {
   posts: [],
   slots: [],
   status: null,
+  ownerTimezone: 'America/Chicago',
 };
 
 async function api(method, path, body) {
@@ -842,17 +843,19 @@ function renderSlots() {
     list.innerHTML = '<li class="empty-state">No slots yet.</li>';
     return;
   }
-  list.innerHTML = state.slots.map(s => `
+  list.innerHTML = state.slots.map(s => {
+    const { dow, time } = convertSlotDisplay(s.day_of_week, s.time_local, s.timezone, state.ownerTimezone);
+    return `
     <li class="slot-item">
-      <span>${DAYS[s.day_of_week]} at ${s.time_local} <span style="color:var(--muted)">(${s.timezone})</span>
+      <span>${DAYS[dow]} at ${time} <span style="color:var(--muted)">(${state.ownerTimezone})</span>
         ${!s.enabled ? '<span style="color:var(--muted);font-size:12px"> · disabled</span>' : ''}
       </span>
       <span style="display:flex;gap:6px">
         <button class="btn-ghost btn-sm" onclick="toggleSlot(${s.id}, ${s.enabled})">${s.enabled ? 'Disable' : 'Enable'}</button>
         <button class="btn-danger btn-sm" onclick="deleteSlot(${s.id})">Remove</button>
       </span>
-    </li>
-  `).join('');
+    </li>`;
+  }).join('');
 }
 
 async function toggleSlot(id, enabled) {
@@ -907,6 +910,10 @@ async function loadStatus() {
   const r = await api('GET', '/api/status');
   if (!r) return;
   state.status = r.data;
+  if (r.data.owner_timezone) {
+    state.ownerTimezone = r.data.owner_timezone;
+    document.getElementById('slot-tz').value = r.data.owner_timezone;
+  }
   renderStatus();
   renderBookmarklet(); // bookmarklet works regardless of LinkedIn connection
 }
@@ -968,6 +975,37 @@ document.getElementById('show-bookmarklet-code').onclick = () => {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Convert a recurring slot's (dayOfWeek, timeLocal, slotTz) to the display timezone.
+// Uses a fixed reference week (Jan 11–17 2026) to get a stable offset regardless of DST.
+function convertSlotDisplay(dayOfWeek, timeLocal, slotTz, displayTz) {
+  if (slotTz === displayTz) return { dow: dayOfWeek, time: timeLocal };
+  try {
+    const [h, m] = timeLocal.split(':').map(Number);
+    // Jan 11 2026 = Sunday, so day 0→Jan11, 1→Jan12 … 6→Jan17
+    const approxMs = Date.UTC(2026, 0, 11 + dayOfWeek, h, m, 0);
+    // Find UTC offset: how far approxMs is from slotTz showing h:m
+    const fp = new Intl.DateTimeFormat('en-US', {
+      timeZone: slotTz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date(approxMs));
+    const fromH = parseInt(fp.find(p => p.type === 'hour').value);
+    const fromM = parseInt(fp.find(p => p.type === 'minute').value);
+    let diffMin = (h * 60 + m) - (fromH * 60 + fromM);
+    if (diffMin > 720) diffMin -= 1440;
+    if (diffMin < -720) diffMin += 1440;
+    const slotUtc = approxMs + diffMin * 60_000;
+    // Format in displayTz
+    const tp = new Intl.DateTimeFormat('en-US', {
+      timeZone: displayTz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date(slotUtc));
+    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(tp.find(p => p.type === 'weekday').value);
+    const time = `${tp.find(p => p.type === 'hour').value}:${tp.find(p => p.type === 'minute').value}`;
+    return { dow, time };
+  } catch (_) {
+    // Fall back to stored values if either timezone name is unrecognized
+    return { dow: dayOfWeek, time: timeLocal };
+  }
+}
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
