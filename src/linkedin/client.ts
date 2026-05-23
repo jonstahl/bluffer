@@ -13,6 +13,7 @@
 import { config } from '../config';
 
 const POSTS_URL = 'https://api.linkedin.com/rest/posts';
+const SOCIAL_ACTIONS_URL = 'https://api.linkedin.com/rest/socialActions';
 
 type PostRow = {
   kind: 'original' | 'repost';
@@ -61,6 +62,27 @@ export async function postToLinkedIn(
   const urn = res.headers.get('x-restli-id');
   if (!urn) throw new Error('LinkedIn API returned 201 but no x-restli-id header');
   return urn;
+}
+
+export async function fetchSocialActions(
+  accessToken: string,
+  postUrn: string,
+): Promise<{ likes: number; comments: number } | null> {
+  const res = await fetch(`${SOCIAL_ACTIONS_URL}/${encodeURIComponent(postUrn)}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'LinkedIn-Version': config.linkedinApiVersion,
+      'X-Restli-Protocol-Version': '2.0.0',
+    },
+  });
+  if (!res.ok) return null;
+  const data = await res.json() as Record<string, unknown>;
+  const likes = data.likesSummary as Record<string, unknown> | undefined;
+  const comments = data.commentsSummary as Record<string, unknown> | undefined;
+  return {
+    likes: (likes?.totalLikes as number) ?? 0,
+    comments: (comments?.totalFirstLevelComments as number) ?? 0,
+  };
 }
 
 export async function deleteFromLinkedIn(

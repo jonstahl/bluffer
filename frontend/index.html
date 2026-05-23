@@ -56,6 +56,7 @@
           <option value="scheduled">Scheduled</option>
         </select>
         <button class="btn-ghost btn-sm" id="refresh-btn">↺ Refresh</button>
+        <button class="btn-ghost btn-sm" id="refresh-stats-btn" style="display:none">↺ Refresh stats</button>
       </div>
       <ul id="posts-list" class="list-none m-0 p-0">
         <li class="empty-state">Loading…</li>
@@ -322,6 +323,8 @@ function renderPosts() {
   const isHistory = state.activeSubtab === 'history';
   const filterEl = document.getElementById('filter-status');
   filterEl.style.visibility = isHistory ? 'hidden' : 'visible';
+  document.getElementById('refresh-stats-btn').style.display = isHistory ? '' : 'none';
+  document.getElementById('refresh-btn').style.display = isHistory ? 'none' : '';
   const statusFilter = filterEl.value;
   const posts = state.posts.filter(p =>
     isHistory
@@ -346,6 +349,7 @@ function renderPosts() {
         ${p.published_at  ? `<span>✅ ${fmtDt(p.published_at)}</span>` : ''}
         ${p.error         ? `<span style="color:var(--danger)">⚠ ${escHtml(p.error)}</span>` : ''}
         ${p.source_url    ? `<a href="${escHtml(p.source_url)}" target="_blank" style="font-size:12px">Source ↗</a>` : ''}
+        ${fmtStats(p.stats)}
       </div>
       <div class="post-item-actions">
         ${['draft','queued','scheduled','failed'].includes(p.status) ? `<button class="btn-ghost btn-sm" onclick="openEditModal(${p.id})">Edit</button>` : ''}
@@ -362,6 +366,11 @@ function renderPosts() {
 async function deletePost(id) {
   await api('DELETE', `/api/posts/${id}`);
   await loadPosts();
+}
+
+async function refreshStats() {
+  const r = await api('POST', '/api/posts/stats/refresh');
+  if (r && r.ok) { state.posts = r.data; renderPosts(); }
 }
 
 async function removeFromHistory(id) {
@@ -550,10 +559,12 @@ document.querySelectorAll('.subtab').forEach(btn => {
     btn.classList.add('active');
     state.activeSubtab = btn.dataset.subtab;
     renderPosts();
+    if (btn.dataset.subtab === 'history') refreshStats();
   });
 });
 document.getElementById('filter-status').onchange = renderPosts;
 document.getElementById('refresh-btn').onclick = loadPosts;
+document.getElementById('refresh-stats-btn').onclick = refreshStats;
 
 // Auto-refresh: poll every 30s + refresh on tab focus
 setInterval(loadPosts, 30_000);
@@ -807,6 +818,14 @@ function escHtml(s) {
 
 function fmtDt(iso) {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function fmtStats(statsJson) {
+  if (!statsJson) return '';
+  try {
+    const s = typeof statsJson === 'string' ? JSON.parse(statsJson) : statsJson;
+    return `<span style="font-size:12px;opacity:0.7">👍 ${s.likes ?? 0} &nbsp;💬 ${s.comments ?? 0}</span>`;
+  } catch { return ''; }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { getDb } from '../db';
 import { requireAuth } from './auth';
 import { nextSlotDateTime } from '../lib/timezone';
 import { processScheduled } from '../scheduler';
-import { deleteFromLinkedIn } from '../linkedin/client';
+import { deleteFromLinkedIn, fetchSocialActions } from '../linkedin/client';
 import { decrypt } from '../lib/crypto';
 
 type Post = {
@@ -17,6 +17,7 @@ type Post = {
   slot_id: number | null;
   published_urn: string | null;
   published_at: string | null;
+  stats: string | null;
   error: string | null;
   retry_count: number;
   created_at: string;
@@ -254,6 +255,39 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
       }
       db.prepare('DELETE FROM posts WHERE id = ?').run(id);
       return reply.status(204).send();
+    },
+  );
+
+  app.post(
+    '/api/posts/stats/refresh',
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      const db = getDb();
+      type AuthRow = { access_token: string; expires_at: string };
+      const auth = db.prepare('SELECT access_token, expires_at FROM linkedin_auth WHERE id = 1')
+        .get() as AuthRow | undefined;
+      if (!auth) return reply.status(400).send({ error: 'No LinkedIn account connected' });
+      if (new Date(auth.expires_at) <= new Date()) {
+        return reply.status(400).send({ error: 'LinkedIn token expired — reconnect at /auth/linkedin' });
+      }
+
+      const posts = db.prepare(
+        `SELECT id, published_urn FROM posts WHERE status = 'published' AND published_urn IS NOT NULL`,
+      ).all() as { id: number; published_urn: string }[];
+
+      const token = decrypt(auth.access_token);
+      const update = db.prepare(`UPDATE posts SET stats = ? WHERE id = ?`);
+
+      for (const post of posts) {
+        const stats = await fetchSocialActions(token, post.published_urn);
+        if (stats) {
+          update.run(JSON.stringify({ ...stats, fetched_at: new Date().toISOString() }), post.id);
+        }
+      }
+
+      return db.prepare(
+        'SELECT * FROM posts ORDER BY scheduled_for ASC NULLS LAST, created_at ASC',
+      ).all();
     },
   );
 
