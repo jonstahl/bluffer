@@ -349,6 +349,7 @@ function renderPosts() {
         ${['queued','scheduled'].includes(p.status) ? `<button class="btn-ghost btn-sm" onclick="bumpPost(${p.id})">Bump it!</button>` : ''}
         ${p.status === 'failed' ? `<button class="btn-ghost btn-sm" onclick="reschedulePost(${p.id})">Retry</button>` : ''}
         ${['draft','queued','scheduled','failed'].includes(p.status) ? `<button class="btn-danger btn-sm" onclick="deletePost(${p.id})">Delete</button>` : ''}
+        ${p.status === 'published' ? `<button class="btn-ghost btn-sm" onclick="removeFromHistory(${p.id})">Remove from history</button>` : ''}
         ${p.status === 'published' && p.published_urn ? `<button class="btn-danger btn-sm" onclick="deletePostFromLinkedIn(${p.id})">Delete from LinkedIn</button>` : ''}
       </div>
     </li>
@@ -360,10 +361,19 @@ async function deletePost(id) {
   await loadPosts();
 }
 
+async function removeFromHistory(id) {
+  if (!confirm('Remove this post from your local history? This does NOT delete it from LinkedIn.')) return;
+  await api('DELETE', `/api/posts/${id}`);
+  await loadPosts();
+}
+
 async function deletePostFromLinkedIn(id) {
   if (!confirm('Delete this post from LinkedIn? It will be removed from LinkedIn and reset to draft here.')) return;
   const r = await api('DELETE', `/api/posts/${id}/linkedin`);
-  if (r && !r.ok) { alert(r.data?.error || 'Failed to delete from LinkedIn'); return; }
+  if (r && !r.ok) {
+    alert('LinkedIn delete failed:\n\n' + (r.data?.error || 'Unknown error'));
+    return;
+  }
   await loadPosts();
 }
 
