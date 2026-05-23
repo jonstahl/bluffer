@@ -24,4 +24,8 @@ multi-device, plus a bookmarklet for reposts-with-commentary).
 - `/api/capture` is the only endpoint that allows the `linkedin.com` CORS origin.
 
 ## Commands
-- (Fill in after scaffolding via `/init` — e.g. `npm run dev`, `npm run build`, `npm test`, `fly deploy`.)
+- `cp .env.example .env` then fill in secrets before first run
+- `npm run dev` — start locally with `.env` (tsx watch, hot reload)
+- `npm run build` — compile TypeScript to `dist/`
+- `npm start` — run compiled output (production-style, no `.env` loading)
+- `fly deploy` — build and deploy to Fly.io
