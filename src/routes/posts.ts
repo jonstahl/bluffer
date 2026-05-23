@@ -46,16 +46,6 @@ type PatchBody = Partial<
   Pick<Post, 'commentary' | 'status' | 'scheduled_for' | 'slot_id' | 'source_url' | 'source_urn'>
 > & { queue?: boolean; post_now?: boolean };
 
-// Normalize user-supplied text: unify line endings and strip control characters
-// that would cause SQLite null-termination truncation or LinkedIn API truncation.
-function normalizeText(s: string): string {
-  return s
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
-}
-
 function takenScheduledTimes(db: ReturnType<typeof getDb>, excludeId?: number): Set<string> {
   const rows = db.prepare(
     "SELECT scheduled_for FROM posts WHERE status IN ('queued','scheduled','publishing') AND scheduled_for IS NOT NULL",
@@ -114,7 +104,7 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
       const db = getDb();
       const {
         kind = 'original',
-        commentary: rawCommentary = '',
+        commentary = '',
         source_url,
         source_urn,
         scheduled_for,
@@ -122,7 +112,6 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
         queue,
         post_now,
       } = req.body;
-      const commentary = normalizeText(rawCommentary);
 
       let status: Post['status'] = 'draft';
       let resolvedScheduledFor: string | null = scheduled_for ?? null;
@@ -184,11 +173,7 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
         'commentary', 'source_url', 'source_urn',
       ];
       for (const k of contentFields) {
-        if (k in req.body) {
-          updates[k] = k === 'commentary'
-            ? normalizeText(String(req.body[k as keyof PatchBody] ?? ''))
-            : req.body[k as keyof PatchBody];
-        }
+        if (k in req.body) updates[k] = req.body[k as keyof PatchBody];
       }
 
       // Apply scheduling

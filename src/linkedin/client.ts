@@ -25,9 +25,15 @@ export async function postToLinkedIn(
   memberUrn: string,
   post: PostRow,
 ): Promise<string> {
+  // LinkedIn's little-text parser treats '(' as an annotation-reference start and
+  // silently truncates commentary there if it can't parse a valid URN/URL following it.
+  // A zero-width space (U+200B) before each '(' is invisible in the rendered post
+  // but breaks the parser's pattern match.
+  const commentary = post.commentary.replace(/\(/g, '​(');
+
   const body: Record<string, unknown> = {
     author: memberUrn,
-    commentary: post.commentary,
+    commentary,
     visibility: 'PUBLIC',
     distribution: {
       feedDistribution: 'MAIN_FEED',
