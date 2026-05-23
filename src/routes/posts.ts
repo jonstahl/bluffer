@@ -3,6 +3,8 @@ import { getDb } from '../db';
 import { requireAuth } from './auth';
 import { nextSlotDateTime } from '../lib/timezone';
 import { processScheduled } from '../scheduler';
+import { deleteFromLinkedIn } from '../linkedin/client';
+import { decrypt } from '../lib/crypto';
 
 type Post = {
   id: number;
@@ -252,6 +254,40 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
       }
       db.prepare('DELETE FROM posts WHERE id = ?').run(id);
       return reply.status(204).send();
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    '/api/posts/:id/linkedin',
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      const db = getDb();
+      const id = parseInt(req.params.id, 10);
+      const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(id) as Post | undefined;
+
+      if (!post) return reply.status(404).send({ error: 'Not found' });
+      if (post.status !== 'published' || !post.published_urn) {
+        return reply.status(400).send({ error: 'Post is not published on LinkedIn' });
+      }
+
+      type AuthRow = { access_token: string; expires_at: string };
+      const auth = db.prepare('SELECT access_token, expires_at FROM linkedin_auth WHERE id = 1')
+        .get() as AuthRow | undefined;
+
+      if (!auth) return reply.status(400).send({ error: 'No LinkedIn account connected' });
+      if (new Date(auth.expires_at) <= new Date()) {
+        return reply.status(400).send({ error: 'LinkedIn token expired — reconnect at /auth/linkedin' });
+      }
+
+      try {
+        await deleteFromLinkedIn(decrypt(auth.access_token), post.published_urn);
+        db.prepare(
+          `UPDATE posts SET status = 'draft', published_urn = NULL, published_at = NULL, error = NULL WHERE id = ?`,
+        ).run(id);
+        return db.prepare('SELECT * FROM posts WHERE id = ?').get(id);
+      } catch (err) {
+        return reply.status(502).send({ error: err instanceof Error ? err.message : String(err) });
+      }
     },
   );
 }

@@ -62,3 +62,22 @@ export async function postToLinkedIn(
   if (!urn) throw new Error('LinkedIn API returned 201 but no x-restli-id header');
   return urn;
 }
+
+export async function deleteFromLinkedIn(
+  accessToken: string,
+  postUrn: string,
+): Promise<void> {
+  const res = await fetch(`${POSTS_URL}/${encodeURIComponent(postUrn)}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'LinkedIn-Version': config.linkedinApiVersion,
+      'X-Restli-Protocol-Version': '2.0.0',
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`LinkedIn API ${res.status}: ${text}`);
+  }
+}
