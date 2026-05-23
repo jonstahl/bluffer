@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.9.2 — 2026-05-23
+
+### Features
+- **Auto-refresh** — Queue and History views now refresh automatically every 30 seconds and immediately when switching back to the tab
+
 ## v0.9.1 — 2026-05-23
 
 ### Features
