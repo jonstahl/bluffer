@@ -25,7 +25,7 @@ export function startScheduler(): void {
   cron.schedule('* * * * *', () => { void processScheduled(); });
 }
 
-async function processScheduled(): Promise<void> {
+export async function processScheduled(): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
 

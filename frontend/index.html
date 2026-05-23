@@ -351,6 +351,13 @@
             <div id="compose-datetime-row" style="display:none;padding-left:28px">
               <input type="datetime-local" id="compose-datetime">
             </div>
+            <label class="schedule-opt">
+              <input type="radio" name="compose-when" value="now">
+              <div class="schedule-opt-body">
+                <strong>Post it now!</strong>
+                <span>Publish to LinkedIn immediately</span>
+              </div>
+            </label>
           </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
@@ -786,6 +793,8 @@ document.getElementById('compose-submit').onclick = async () => {
 
   if (when === 'queue') {
     body.queue = true;
+  } else if (when === 'now') {
+    body.post_now = true;
   } else {
     const dt = document.getElementById('compose-datetime').value;
     if (!dt) { errEl.textContent = 'Pick a date and time.'; return; }

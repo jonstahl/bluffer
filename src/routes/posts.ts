@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { getDb } from '../db';
 import { requireAuth } from './auth';
 import { nextSlotDateTime } from '../lib/timezone';
+import { processScheduled } from '../scheduler';
 
 type Post = {
   id: number;
@@ -35,7 +36,8 @@ type CreateBody = {
   source_urn?: string;
   scheduled_for?: string;
   slot_id?: number;
-  queue?: boolean;   // true = find the earliest upcoming slot automatically
+  queue?: boolean;    // true = find the earliest upcoming slot automatically
+  post_now?: boolean; // true = publish immediately
 };
 
 type PatchBody = Partial<
@@ -106,13 +108,18 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
         scheduled_for,
         slot_id,
         queue,
+        post_now,
       } = req.body;
 
       let status: Post['status'] = 'draft';
       let resolvedScheduledFor: string | null = scheduled_for ?? null;
       let resolvedSlotId: number | null = slot_id ?? null;
 
-      if (queue) {
+      if (post_now) {
+        status = 'scheduled';
+        resolvedScheduledFor = new Date().toISOString();
+        resolvedSlotId = null;
+      } else if (queue) {
         const slots = db.prepare('SELECT * FROM schedule_slots WHERE enabled = 1').all() as Slot[];
         const taken = takenScheduledTimes(db);
         const open = findEarliestOpenSlot(slots, taken);
@@ -139,6 +146,8 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
         status, resolvedScheduledFor,
         resolvedSlotId,
       );
+
+      if (post_now) void processScheduled();
 
       return reply.status(201).send(
         db.prepare('SELECT * FROM posts WHERE id = ?').get(result.lastInsertRowid),
