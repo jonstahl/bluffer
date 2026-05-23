@@ -75,8 +75,13 @@ export async function fetchSocialActions(
       'X-Restli-Protocol-Version': '2.0.0',
     },
   });
-  if (!res.ok) return null;
-  const data = await res.json() as Record<string, unknown>;
+  const text = await res.text();
+  if (!res.ok) {
+    console.error('[socialActions] error', res.status, text);
+    return null;
+  }
+  const data = JSON.parse(text) as Record<string, unknown>;
+  console.log('[socialActions] raw response', JSON.stringify(data));
   const likes = data.likesSummary as Record<string, unknown> | undefined;
   const comments = data.commentsSummary as Record<string, unknown> | undefined;
   return {
