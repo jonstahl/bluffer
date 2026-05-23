@@ -5,6 +5,9 @@
 ### Features
 - **Auto-refresh** — Queue and History views refresh every 30 seconds and immediately when switching back to the tab
 
+### Bug fixes
+- Fixed post body not rendering line breaks in the queue/history list
+
 ---
 
 ## v0.9.1 — 2026-05-23
