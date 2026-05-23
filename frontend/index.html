@@ -109,6 +109,13 @@
                 <span>Publish to LinkedIn immediately</span>
               </div>
             </label>
+            <label class="schedule-opt">
+              <input type="radio" name="compose-when" value="draft">
+              <div class="schedule-opt-body">
+                <strong>Save as draft</strong>
+                <span>Don't schedule yet</span>
+              </div>
+            </label>
           </div>
         </div>
         <div class="flex gap-2.5">
@@ -600,11 +607,12 @@ document.getElementById('compose-submit').onclick = async () => {
     body.queue = true;
   } else if (when === 'now') {
     body.post_now = true;
-  } else {
+  } else if (when === 'schedule') {
     const dt = document.getElementById('compose-datetime').value;
     if (!dt) { errEl.textContent = 'Pick a date and time.'; return; }
     body.scheduled_for = new Date(dt).toISOString();
   }
+  // when === 'draft': no extra fields needed
 
   const r = await api('POST', '/api/posts', body);
   if (!r) return;
