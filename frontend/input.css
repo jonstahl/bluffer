@@ -120,7 +120,7 @@
   .post-item[data-status="failed"]      { border-left-color: #ef4444; }
 
   .post-item-header  { @apply flex items-center gap-2 mb-2; }
-  .post-item-body    { @apply text-gray-900 leading-relaxed mb-2; font-size: 15px; }
+  .post-item-body    { @apply text-gray-900 leading-relaxed mb-2; font-size: 15px; white-space: pre-wrap; }
   .post-item-meta    { @apply text-gray-400 flex gap-3 flex-wrap items-center; font-size: 11px; }
   .post-item-actions { @apply mt-2.5 flex gap-2; }
 
