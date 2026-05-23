@@ -41,16 +41,64 @@ This feature is only viable if Bluffer becomes a LinkedIn-approved partner produ
 
 ---
 
+## Images in posts
+
+**Status: feasible with standard `w_member_social` scope.** No partner access required.
+
+### Upload flow (verified from docs 2026-05-23)
+
+Three-step process, all server-side using the stored access token:
+
+1. **Initialize** — `POST /rest/images?action=initializeUpload` with `{ "initializeUploadRequest": { "owner": "urn:li:person:XXX" } }` → returns `uploadUrl` and image URN (`urn:li:image:XXX`)
+2. **Upload binary** — `PUT <uploadUrl>` with raw bytes, `Content-Type: application/octet-stream`
+3. **Reference in post** — `"content": { "media": { "id": "urn:li:image:XXX", "altText": "..." } }` in the Posts API payload
+
+### Image processing caveat
+
+After upload, images enter a `PROCESSING` → `AVAILABLE` state. With only `w_member_social`, **versioned GET calls to `/rest/images` are blocked** (write-only scope for versioned gateway). Legacy GET calls (no `LinkedIn-Version` header) still work with `w_member_social` and could be used to poll status.
+
+Options for handling this at publish time:
+- **Optimistic** — post immediately after successful PUT; LinkedIn typically processes fast enough (simplest)
+- **Legacy GET poll** — `GET /rest/images/{urn}` without `LinkedIn-Version` header, wait for `status: "AVAILABLE"`
+- **Fixed delay** — wait 2–3s before publishing
+
+### Constraints
+- Max **36,152,320 pixels**
+- Formats: **JPG, PNG, GIF** (GIF up to 250 frames)
+- GIF supports up to 250 frames
+
+### Implementation sketch
+- Add `image_urn TEXT` column to posts
+- File input in Compose; server receives the upload (multipart), calls initializeUpload, PUTs to the pre-signed URL, stores the URN
+- Scheduler includes `content.media` in the post payload when `image_urn` is set
+- Optionally support multiple images via the [MultiImage API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/multiimage-post-api)
+
+---
+
 ## Tagging people in posts
 
-LinkedIn's Posts API requires a person's **URN** (`urn:li:person:XXXXXXXX`) to tag them — it doesn't parse `@Name` strings. Mentions are structured annotations in the API payload, not free text.
+LinkedIn's Posts API uses **inline mention syntax** in the `commentary` field — simpler than expected:
+
+```
+"Hello @[Jon Stahl](urn:li:person:XXXXXXXX), check this out!"
+```
+
+No structured annotation object needed. However, this doesn't change the core blocker.
+
+**Still requires partner API access for any useful UX.** The user still needs a person's URN (`urn:li:person:XXXXXXXX`), and looking up URNs from names requires partner-gated endpoints:
+
+- `/v2/typeahead?query=name&type=PEOPLE` — partner-gated
+- People search by name — partner-gated
+
+### Partial workaround (untested)
+If the user pastes a LinkedIn profile URL (e.g. `https://linkedin.com/in/jonstahl`), the vanity name can be extracted and `/v2/people/(id:jonstahl)` *might* resolve it to a URN with standard scopes — but availability without partner access is unconfirmed and needs live testing.
 
 ### Options
 
-1. **Manual URN entry (simplest)** — A "Mentions" field in Compose where the user pastes LinkedIn profile URLs. Parse the ID from the URL (or accept raw URNs). Embed as `mentionedEntities` alongside the post text. Users look up each person's URL once.
+1. **Profile URL → URN resolution** — User pastes a LinkedIn profile URL; server extracts the vanity name and attempts `/v2/people/(id:{vanityName})`. If it works with standard scopes, this avoids manual URN lookup. **Needs testing.**
 
-2. **Type-ahead search (best UX, restricted access)** — LinkedIn's `/v2/typeahead?query=name&type=PEOPLE` endpoint would power real-time `@name` search. Requires **LinkedIn Marketing Developer Platform partner access** — a separate application process, not available with standard OAuth scopes.
+2. **Manual URN entry** — User pastes a LinkedIn profile URL or raw URN directly. Parse the numeric ID from the URL. No API call needed. Friction: users need to find the URL each time.
 
-3. **Hybrid** — Let the user type `@Jon Stahl` in the compose box; on publish, show a modal to confirm or supply the URN for each mention.
+3. **Type-ahead search (best UX, restricted)** — Real-time `@name` search via LinkedIn typeahead. Requires **LinkedIn Marketing Developer Platform partner access**.
 
 
