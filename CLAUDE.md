@@ -23,6 +23,13 @@ multi-device, plus a bookmarklet for reposts-with-commentary).
 - The bookmarklet captures URL + the owner's commentary only — never scrape post text.
 - `/api/capture` is the only endpoint that allows the `linkedin.com` CORS origin.
 
+## Testing
+- **When making code changes, always update the Playwright tests in `tests/` if the change affects
+  observable behavior** (new UI elements, changed routes, new features, removed features).
+- All test data must be cleaned up: posts use the `[pw] ` commentary prefix; slots use time `22:22`.
+  Every test file that creates data must have an `afterAll` safety-net that deletes via API.
+- Run tests with `npx playwright test`. Auth state is cached in `tests/.auth.json` via `global-setup.ts`.
+
 ## Commands
 - `cp .env.example .env` then fill in secrets before first run
 - `npm run dev` — start locally with `.env` (tsx watch, hot reload)
