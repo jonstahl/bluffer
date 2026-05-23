@@ -6,6 +6,7 @@ COPY package*.json tsconfig.json ./
 RUN npm ci
 
 COPY src ./src
+COPY frontend ./frontend
 RUN npm run build
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
@@ -19,7 +20,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
-COPY frontend ./frontend
+COPY --from=builder /app/frontend ./frontend
 
 # Litestream binary (Phase 6 — harmless if not configured)
 ARG LITESTREAM_VERSION=v0.3.13

@@ -6,292 +6,32 @@
   <title>Bluffer</title>
   <meta name="theme-color" content="#0a66c2">
   <link rel="manifest" href="/manifest.json">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --li: #0a66c2;
-      --li-dark: #004182;
-      --bg: #f3f2ef;
-      --card: #fff;
-      --text: #191919;
-      --muted: #666;
-      --border: #e0e0e0;
-      --danger: #c00;
-      --warn: #b35c00;
-      --success: #057642;
-      --radius: 8px;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 15px;
-      color: var(--text);
-      background: var(--bg);
-      min-height: 100vh;
-    }
-
-    header {
-      background: var(--li);
-      color: #fff;
-      padding: 0 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 52px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.5px; }
-    header nav { display: flex; gap: 12px; align-items: center; }
-    header nav a {
-      color: rgba(255,255,255,.85);
-      text-decoration: none;
-      font-size: 14px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    header nav a:hover, header nav a.active { color: #fff; background: rgba(255,255,255,.15); }
-
-    #banner {
-      background: #fff3cd;
-      border-bottom: 1px solid #f0c040;
-      color: #7a5000;
-      padding: 10px 20px;
-      font-size: 14px;
-      display: none;
-    }
-    #banner a { color: var(--li); font-weight: 600; }
-
-    main { max-width: 800px; margin: 0 auto; padding: 20px; }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      margin-bottom: 16px;
-    }
-
-    .card h2 { font-size: 16px; margin-bottom: 14px; }
-
-    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
-    input:not([type=radio]):not([type=checkbox]), textarea, select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 14px;
-      font-family: inherit;
-      background: #fafafa;
-      outline: none;
-      transition: border .15s;
-    }
-    input:focus, textarea:focus, select:focus { border-color: var(--li); background: #fff; }
-    textarea { resize: vertical; min-height: 90px; }
-
-    .form-row { margin-bottom: 12px; }
-    .form-row.inline { display: flex; gap: 10px; }
-    .form-row.inline > * { flex: 1; }
-
-    button {
-      cursor: pointer;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 16px;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      transition: background .15s;
-    }
-    .btn-primary { background: var(--li); color: #fff; }
-    .btn-primary:hover { background: var(--li-dark); }
-    .btn-ghost { background: transparent; color: var(--li); border: 1.5px solid var(--li); }
-    .btn-ghost:hover { background: #e8f0fe; }
-    .btn-danger { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); font-size: 12px; padding: 4px 8px; }
-    .btn-danger:hover { background: #fff0f0; }
-    .btn-sm { padding: 4px 10px; font-size: 12px; font-weight: 400; }
-
-    .status-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .3px;
-    }
-    .status-draft     { background: #e9e9e9; color: #555; }
-    .status-queued    { background: #dbeafe; color: #1d4ed8; }
-    .status-scheduled { background: #d1fae5; color: var(--success); }
-    .status-publishing{ background: #fef9c3; color: var(--warn); }
-    .status-published { background: #d1fae5; color: var(--success); }
-    .status-failed    { background: #fee2e2; color: var(--danger); }
-
-    .subtabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
-    .subtab {
-      background: none; border: none; border-bottom: 2.5px solid transparent;
-      margin-bottom: -2px; padding: 8px 16px; font-size: 14px; font-weight: 600;
-      color: var(--muted); cursor: pointer; font-family: inherit;
-    }
-    .subtab.active { color: var(--li); border-bottom-color: var(--li); }
-    .subtab:hover:not(.active) { color: var(--text); }
-
-    #posts-list { list-style: none; }
-    .post-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 10px;
-    }
-    .post-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .post-item-header .kind { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
-    .post-item-body { font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: 8px; }
-    .post-item-meta { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-    .post-item-actions { margin-top: 10px; display: flex; gap: 8px; }
-
-    .drag-handle {
-      cursor: grab;
-      color: var(--muted);
-      font-size: 16px;
-      line-height: 1;
-      padding: 0 2px;
-      flex-shrink: 0;
-      user-select: none;
-    }
-    .post-item.dragging { opacity: .35; }
-    .post-item.drag-over { border-top: 2.5px solid var(--li); }
-
-    #slots-list { list-style: none; }
-    .slot-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 14px;
-    }
-    .slot-item:last-child { border-bottom: none; }
-
-    .view { display: none; }
-    .view.active { display: block; }
-
-    #login-screen {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg);
-    }
-    #login-screen .card { width: 340px; }
-    #login-screen h1 { font-size: 24px; color: var(--li); margin-bottom: 20px; text-align: center; }
-
-    .error-msg { color: var(--danger); font-size: 13px; margin-top: 6px; }
-    .empty-state { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
-
-    #app { display: none; }
-
-    .schedule-opt {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 12px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: border-color .15s, background .15s;
-    }
-    .schedule-opt:has(input:checked) {
-      border-color: var(--li);
-      background: #f0f6ff;
-    }
-    .schedule-opt input[type=radio] { margin-top: 2px; flex-shrink: 0; }
-    .schedule-opt-body { display: flex; flex-direction: column; gap: 2px; }
-    .schedule-opt-body strong { font-size: 14px; }
-    .schedule-opt-body span { font-size: 12px; color: var(--muted); }
-
-    .day-pill {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      border: 1.5px solid var(--border);
-      border-radius: 16px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      user-select: none;
-      transition: border-color .15s, background .15s;
-    }
-    .day-pill:has(input:checked) {
-      border-color: var(--li);
-      background: #e8f0fe;
-      color: var(--li);
-    }
-    .day-pill input { display: none; }
-
-    #bookmarklet-code {
-      font-family: monospace;
-      font-size: 11px;
-      background: #f5f5f5;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 10px;
-      word-break: break-all;
-      margin-top: 8px;
-      user-select: all;
-    }
-
-    /* Edit modal */
-    #edit-modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.4);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-    }
-    #edit-modal-backdrop.open { display: flex; }
-    #edit-modal {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 24px;
-      width: min(560px, calc(100vw - 32px));
-      max-height: calc(100vh - 64px);
-      overflow-y: auto;
-      box-shadow: 0 8px 40px rgba(0,0,0,.25);
-    }
-    #edit-modal h2 { font-size: 16px; margin-bottom: 16px; }
-  </style>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
 <!-- Login screen -->
-<div id="login-screen">
-  <div class="card">
-    <h1>Bluffer</h1>
-    <div class="form-row">
+<div id="login-screen" class="min-h-screen flex items-center justify-center bg-[#f3f2ef]">
+  <div class="bg-white border border-gray-200 rounded-xl p-8 w-[360px] shadow-lg">
+    <h1 class="text-2xl font-bold text-li mb-6 text-center">Bluffer</h1>
+    <div class="form-row mb-4">
       <label>Password</label>
       <input type="password" id="login-password" placeholder="Owner password" autocomplete="current-password">
     </div>
-    <button class="btn-primary" id="login-btn" style="width:100%">Sign in</button>
+    <button class="btn-primary w-full" id="login-btn">Sign in</button>
     <div class="error-msg" id="login-error"></div>
   </div>
 </div>
 
 <!-- Main app (hidden until logged in) -->
-<div id="app">
-  <div id="banner">
+<div id="app" style="display:none">
+  <div id="banner" style="display:none" class="bg-amber-50 border-b border-amber-300 text-amber-800 px-5 py-2.5 text-sm">
     ⚠ LinkedIn token expires soon. <a href="/auth/linkedin">Reconnect now →</a>
   </div>
 
-  <header>
-    <h1>Bluffer</h1>
-    <nav>
+  <header class="bg-li text-white px-5 flex items-center justify-between h-[52px] sticky top-0 z-[100]">
+    <h1 class="text-lg font-bold tracking-tight">Bluffer</h1>
+    <nav class="flex gap-3 items-center">
       <a data-view="queue" class="active">Queue</a>
       <a data-view="compose">Compose</a>
       <a data-view="slots">Slots</a>
@@ -300,7 +40,7 @@
     </nav>
   </header>
 
-  <main>
+  <main class="max-w-[800px] mx-auto p-5">
 
     <!-- Queue view -->
     <div id="view-queue" class="view active">
@@ -308,16 +48,16 @@
         <button class="subtab active" data-subtab="active">Queue</button>
         <button class="subtab" data-subtab="history">History</button>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <select id="filter-status" style="width:160px;padding:6px">
-          <option value="">All</option>
+      <div class="flex justify-between items-center mb-4">
+        <select id="filter-status" style="width:180px">
+          <option value="">All statuses</option>
           <option value="draft">Drafts</option>
           <option value="queued">Queued</option>
           <option value="scheduled">Scheduled</option>
         </select>
-        <button class="btn-ghost btn-sm" id="refresh-btn">Refresh</button>
+        <button class="btn-ghost btn-sm" id="refresh-btn">↺ Refresh</button>
       </div>
-      <ul id="posts-list">
+      <ul id="posts-list" class="list-none m-0 p-0">
         <li class="empty-state">Loading…</li>
       </ul>
     </div>
@@ -325,26 +65,26 @@
     <!-- Compose view -->
     <div id="view-compose" class="view">
       <div class="card">
-        <h2>New Post</h2>
-        <div class="form-row">
+        <h2 class="text-base font-semibold mb-4">New Post</h2>
+        <div class="form-row mb-3">
           <label>Type</label>
           <select id="compose-kind">
             <option value="original">Original post</option>
             <option value="repost">Repost with commentary</option>
           </select>
         </div>
-        <div class="form-row" id="compose-source-row" style="display:none">
+        <div class="form-row mb-3" id="compose-source-row" style="display:none">
           <label>Source URL (LinkedIn post)</label>
           <input type="url" id="compose-source-url" placeholder="https://www.linkedin.com/feed/update/…">
           <input type="hidden" id="compose-source-urn">
         </div>
-        <div class="form-row">
+        <div class="form-row mb-3">
           <label>Commentary</label>
           <textarea id="compose-commentary" placeholder="What do you want to say?"></textarea>
         </div>
-        <div class="form-row">
+        <div class="form-row mb-4">
           <label>When</label>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <div class="flex flex-col gap-2 mt-1">
             <label class="schedule-opt">
               <input type="radio" name="compose-when" value="queue" checked>
               <div class="schedule-opt-body">
@@ -359,7 +99,7 @@
                 <span>Pick a specific date and time</span>
               </div>
             </label>
-            <div id="compose-datetime-row" style="display:none;padding-left:28px">
+            <div id="compose-datetime-row" style="display:none" class="pl-7">
               <input type="datetime-local" id="compose-datetime">
             </div>
             <label class="schedule-opt">
@@ -371,7 +111,7 @@
             </label>
           </div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:16px">
+        <div class="flex gap-2.5">
           <button class="btn-primary" id="compose-submit">Save post</button>
           <button class="btn-ghost" id="compose-clear">Clear</button>
         </div>
@@ -382,13 +122,13 @@
     <!-- Slots view -->
     <div id="view-slots" class="view">
       <div class="card">
-        <h2>Posting Schedule</h2>
-        <ul id="slots-list"><li class="empty-state">No slots yet.</li></ul>
-        <hr style="margin:16px 0;border:none;border-top:1px solid var(--border)">
-        <h2>Add Slot</h2>
-        <div class="form-row">
+        <h2 class="text-base font-semibold mb-4">Posting Schedule</h2>
+        <ul id="slots-list" class="list-none m-0 p-0"><li class="empty-state">No slots yet.</li></ul>
+        <hr class="my-4 border-t border-gray-200">
+        <h2 class="text-base font-semibold mb-4">Add Slot</h2>
+        <div class="form-row mb-3">
           <label>Days</label>
-          <div id="slot-days" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          <div id="slot-days" class="flex flex-wrap gap-1.5 mt-1">
             <label class="day-pill"><input type="checkbox" value="0"> Sun</label>
             <label class="day-pill"><input type="checkbox" value="1"> Mon</label>
             <label class="day-pill"><input type="checkbox" value="2"> Tue</label>
@@ -401,12 +141,12 @@
             <button type="button" id="slot-days-none" class="btn-ghost btn-sm">None</button>
           </div>
         </div>
-        <div class="form-row inline">
-          <div>
+        <div class="form-row mb-3 flex gap-3">
+          <div class="flex-1">
             <label>Time</label>
             <input type="time" id="slot-time" value="09:00">
           </div>
-          <div>
+          <div class="flex-1">
             <label>Timezone</label>
             <input type="text" id="slot-tz" placeholder="America/Chicago">
           </div>
@@ -419,24 +159,24 @@
     <!-- Settings view -->
     <div id="view-settings" class="view">
       <div class="card" id="li-status-card">
-        <h2>LinkedIn Connection</h2>
+        <h2 class="text-base font-semibold mb-4">LinkedIn Connection</h2>
         <div id="li-status-body">Loading…</div>
       </div>
 
       <div class="card">
-        <h2>Bookmarklet</h2>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        <h2 class="text-base font-semibold mb-2">Bookmarklet</h2>
+        <p class="text-xs text-gray-500 mb-3">
           Drag this link to your bookmarks bar. Click it on any LinkedIn post to open
           Bluffer in a new tab with that post pre-loaded in compose.
         </p>
-        <a id="bookmarklet-link" href="#" style="display:inline-block;padding:8px 14px;background:var(--li);color:#fff;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600">
+        <a id="bookmarklet-link" href="#" class="inline-block px-3.5 py-2 bg-li text-white no-underline rounded text-sm font-semibold">
           📤 Bluffer Capture
         </a>
         <div id="bookmarklet-code" style="display:none"></div>
-        <p style="font-size:12px;color:var(--muted);margin-top:8px">
+        <p class="text-xs text-gray-400 mt-2">
           If you can't drag it, copy the code below and create a bookmark manually with that URL.
         </p>
-        <button class="btn-ghost btn-sm" id="show-bookmarklet-code" style="margin-top:6px">Show code</button>
+        <button class="btn-ghost btn-sm mt-1.5" id="show-bookmarklet-code">Show code</button>
       </div>
     </div>
 
@@ -446,18 +186,18 @@
 <!-- Edit post modal — must be before <script> so elements exist when listeners attach -->
 <div id="edit-modal-backdrop">
   <div id="edit-modal">
-    <h2>Edit Post</h2>
-    <div class="form-row">
+    <h2 class="text-base font-semibold mb-4">Edit Post</h2>
+    <div class="form-row mb-3">
       <label>Commentary</label>
-      <textarea id="edit-commentary" style="min-height:120px"></textarea>
+      <textarea id="edit-commentary" class="min-h-[120px]"></textarea>
     </div>
-    <div class="form-row" id="edit-source-row">
+    <div class="form-row mb-3" id="edit-source-row" style="display:none">
       <label>Source URL</label>
       <input type="url" id="edit-source-url">
     </div>
-    <div class="form-row">
+    <div class="form-row mb-4">
       <label>When</label>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+      <div class="flex flex-col gap-2 mt-1">
         <label class="schedule-opt">
           <input type="radio" name="edit-when" value="queue">
           <div class="schedule-opt-body">
@@ -472,7 +212,7 @@
             <span>Pick a specific date and time</span>
           </div>
         </label>
-        <div id="edit-datetime-row" style="display:none;padding-left:28px">
+        <div id="edit-datetime-row" style="display:none" class="pl-7">
           <input type="datetime-local" id="edit-datetime">
         </div>
         <label class="schedule-opt">
@@ -484,7 +224,7 @@
         </label>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:16px">
+    <div class="flex gap-2.5">
       <button class="btn-primary" id="edit-save-btn">Save changes</button>
       <button class="btn-ghost" id="edit-cancel-btn">Cancel</button>
     </div>
