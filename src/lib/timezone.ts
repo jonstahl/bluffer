@@ -6,9 +6,10 @@ export function nextSlotDateTime(
   dayOfWeek: number,   // 0=Sun … 6=Sat
   timeLocal: string,   // "HH:MM"
   timezone: string,    // IANA, e.g. "America/Chicago"
+  after?: Date,        // find next occurrence strictly after this moment (defaults to now)
 ): Date | null {
   const [hours, minutes] = timeLocal.split(':').map(Number);
-  const now = new Date();
+  const now = after ?? new Date();
 
   for (let daysAhead = 0; daysAhead <= 8; daysAhead++) {
     const probe = new Date(now.getTime() + daysAhead * 86_400_000);

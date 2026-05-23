@@ -42,6 +42,39 @@ type PatchBody = Partial<
   Pick<Post, 'commentary' | 'status' | 'scheduled_for' | 'slot_id' | 'source_url' | 'source_urn'>
 > & { queue?: boolean };
 
+function takenScheduledTimes(db: ReturnType<typeof getDb>, excludeId?: number): Set<string> {
+  const rows = db.prepare(
+    "SELECT scheduled_for FROM posts WHERE status IN ('queued','scheduled','publishing') AND scheduled_for IS NOT NULL",
+  ).all() as { scheduled_for: string }[];
+  const taken = new Set(rows.map(r => r.scheduled_for.slice(0, 16)));
+  if (excludeId != null) {
+    const p = db.prepare('SELECT scheduled_for FROM posts WHERE id = ?').get(excludeId) as { scheduled_for: string | null } | undefined;
+    if (p?.scheduled_for) taken.delete(p.scheduled_for.slice(0, 16));
+  }
+  return taken;
+}
+
+function findEarliestOpenSlot(
+  slots: Slot[],
+  taken: Set<string>,
+): { date: Date; slotId: number } | null {
+  let best: { date: Date; slotId: number } | null = null;
+  for (const s of slots) {
+    let after: Date | undefined;
+    for (let i = 0; i < 60; i++) {
+      const next = nextSlotDateTime(s.day_of_week, s.time_local, s.timezone, after);
+      if (!next) break;
+      const key = next.toISOString().slice(0, 16);
+      if (!taken.has(key)) {
+        if (!best || next < best.date) best = { date: next, slotId: s.id };
+        break;
+      }
+      after = new Date(next.getTime() + 60_000);
+    }
+  }
+  return best;
+}
+
 export async function postRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: { status?: string } }>(
     '/api/posts',
@@ -80,19 +113,11 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
       let resolvedSlotId: number | null = slot_id ?? null;
 
       if (queue) {
-        // Find the earliest upcoming slot across all enabled slots
-        const slots = db.prepare(
-          'SELECT * FROM schedule_slots WHERE enabled = 1',
-        ).all() as Slot[];
-        let earliest: Date | null = null;
-        for (const s of slots) {
-          const next = nextSlotDateTime(s.day_of_week, s.time_local, s.timezone);
-          if (next && (!earliest || next < earliest)) {
-            earliest = next;
-            resolvedSlotId = s.id;
-          }
-        }
-        resolvedScheduledFor = earliest ? earliest.toISOString() : null;
+        const slots = db.prepare('SELECT * FROM schedule_slots WHERE enabled = 1').all() as Slot[];
+        const taken = takenScheduledTimes(db);
+        const open = findEarliestOpenSlot(slots, taken);
+        resolvedScheduledFor = open ? open.date.toISOString() : null;
+        resolvedSlotId = open ? open.slotId : null;
         status = resolvedScheduledFor ? 'queued' : 'draft';
       } else if (slot_id) {
         const slot = db.prepare('SELECT * FROM schedule_slots WHERE id = ? AND enabled = 1').get(slot_id) as Slot | undefined;
@@ -143,15 +168,11 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
       // Apply scheduling
       if (req.body.queue) {
         const slots = db.prepare('SELECT * FROM schedule_slots WHERE enabled = 1').all() as Slot[];
-        let earliest: Date | null = null;
-        let earliestSlotId: number | null = null;
-        for (const s of slots) {
-          const next = nextSlotDateTime(s.day_of_week, s.time_local, s.timezone);
-          if (next && (!earliest || next < earliest)) { earliest = next; earliestSlotId = s.id; }
-        }
-        updates.status = earliest ? 'queued' : 'draft';
-        updates.scheduled_for = earliest ? earliest.toISOString() : null;
-        updates.slot_id = earliestSlotId;
+        const taken = takenScheduledTimes(db, id);
+        const open = findEarliestOpenSlot(slots, taken);
+        updates.status = open ? 'queued' : 'draft';
+        updates.scheduled_for = open ? open.date.toISOString() : null;
+        updates.slot_id = open ? open.slotId : null;
       } else {
         const schedFields: (keyof Omit<PatchBody, 'queue' | 'commentary' | 'source_url' | 'source_urn'>)[] = [
           'status', 'scheduled_for', 'slot_id',
