@@ -4,6 +4,7 @@
 
 ### Features
 - **Auto-refresh** — Queue and History views now refresh automatically every 30 seconds and immediately when switching back to the tab
+- **Engagement stats** — History posts show like and comment counts fetched from LinkedIn's Social Actions API; stats load automatically when opening History and can be manually refreshed via a "Refresh stats" button
 
 ## v0.9.1 — 2026-05-23
 
