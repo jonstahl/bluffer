@@ -313,6 +313,7 @@
         <div class="form-row" id="compose-source-row" style="display:none">
           <label>Source URL (LinkedIn post)</label>
           <input type="url" id="compose-source-url" placeholder="https://www.linkedin.com/feed/update/…">
+          <input type="hidden" id="compose-source-urn">
         </div>
         <div class="form-row">
           <label>Commentary</label>
@@ -395,7 +396,8 @@
       <div class="card">
         <h2>Bookmarklet</h2>
         <p style="font-size:13px;color:var(--muted);margin-bottom:10px">
-          Drag this link to your bookmarks bar, then click it while browsing LinkedIn to capture a repost.
+          Drag this link to your bookmarks bar. Click it on any LinkedIn post to open
+          Bluffer in a new tab with that post pre-loaded in compose.
         </p>
         <a id="bookmarklet-link" href="#" style="display:inline-block;padding:8px 14px;background:var(--li);color:#fff;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600">
           📤 Bluffer Capture
@@ -700,11 +702,12 @@ document.getElementById('compose-submit').onclick = async () => {
   const kind = document.getElementById('compose-kind').value;
   const commentary = document.getElementById('compose-commentary').value.trim();
   const source_url = document.getElementById('compose-source-url').value.trim() || undefined;
+  const source_urn = document.getElementById('compose-source-urn').value.trim() || undefined;
   const when = document.querySelector('input[name=compose-when]:checked').value;
   const errEl = document.getElementById('compose-error');
   errEl.textContent = '';
 
-  const body = { kind, commentary, source_url };
+  const body = { kind, commentary, source_url, source_urn };
 
   if (when === 'queue') {
     body.queue = true;
@@ -719,6 +722,7 @@ document.getElementById('compose-submit').onclick = async () => {
   if (r.ok) {
     document.getElementById('compose-commentary').value = '';
     document.getElementById('compose-source-url').value = '';
+    document.getElementById('compose-source-urn').value = '';
     document.getElementById('compose-datetime').value = '';
     document.getElementById('compose-datetime-row').style.display = 'none';
     document.getElementById('compose-source-row').style.display = 'none';
@@ -820,7 +824,7 @@ async function loadStatus() {
   if (!r) return;
   state.status = r.data;
   renderStatus();
-  renderBookmarklet();
+  renderBookmarklet(); // bookmarklet works regardless of LinkedIn connection
 }
 
 function renderStatus() {
@@ -861,20 +865,17 @@ function renderStatus() {
 }
 
 function renderBookmarklet() {
-  if (!state.status || !state.status.connected) return;
-  // Token is embedded in the bookmarklet URL served from the server.
-  // We fetch it from a predictable endpoint that the session protects.
-  // The actual token comes from BOOKMARKLET_TOKEN env var (set by fly secrets).
-  // We construct the bookmarklet loader here using the app's base URL.
-  // The user gets the loader href; clicking it on linkedin.com loads the overlay script.
-  fetch('/api/bookmarklet-url', { credentials: 'include' })
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (!d) return;
-      const href = `javascript:(function(){var s=document.createElement('script');s.src=${JSON.stringify(d.url + '?t=' + Date.now())};document.head.appendChild(s);})();`;
-      document.getElementById('bookmarklet-link').href = href;
-      document.getElementById('bookmarklet-code').textContent = href;
-    });
+  // Open bluffer in a new tab with source URL + URN as query params.
+  // No bearer token or CORS needed — session cookie handles auth.
+  const base = window.location.origin;
+  const code = 'javascript:(function(){'
+    + 'var u=encodeURIComponent(location.href);'
+    + 'var m=location.href.match(/urn:li:(?:share|ugcPost|activity):[0-9]+/);'
+    + 'var urn=m?("&urn="+encodeURIComponent(m[0])):"";'
+    + 'window.open(' + JSON.stringify(base) + '+"/?source="+u+urn,"_blank");'
+    + '})();';
+  document.getElementById('bookmarklet-link').href = code;
+  document.getElementById('bookmarklet-code').textContent = code;
 }
 
 document.getElementById('show-bookmarklet-code').onclick = () => {
@@ -896,8 +897,28 @@ function fmtDt(iso) {
 
 (async () => {
   const r = await fetch('/api/status', { credentials: 'include' });
-  if (r.status === 401) { showLogin(); }
-  else { showApp(); }
+  if (r.status === 401) { showLogin(); return; }
+  showApp();
+
+  // Bookmarklet redirect: ?source=URL&urn=URN
+  const params = new URLSearchParams(location.search);
+  const source = params.get('source');
+  if (source) {
+    // Switch to compose view
+    document.querySelectorAll('header nav a[data-view]').forEach(x => x.classList.remove('active'));
+    document.querySelector('header nav a[data-view="compose"]').classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-compose').classList.add('active');
+    // Pre-fill as repost
+    document.getElementById('compose-kind').value = 'repost';
+    document.getElementById('compose-source-row').style.display = 'block';
+    document.getElementById('compose-source-url').value = source;
+    const urn = params.get('urn');
+    if (urn) document.getElementById('compose-source-urn').value = urn;
+    document.getElementById('compose-commentary').focus();
+    // Remove params from URL so a reload doesn't re-trigger this
+    history.replaceState({}, '', '/');
+  }
 })();
 </script>
 
