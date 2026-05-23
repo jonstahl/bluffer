@@ -26,10 +26,13 @@ export async function postToLinkedIn(
   post: PostRow,
 ): Promise<string> {
   // LinkedIn's little-text parser treats '(' as an annotation-reference start and
-  // silently truncates commentary there if it can't parse a valid URN/URL following it.
-  // A zero-width space (U+200B) before each '(' is invisible in the rendered post
-  // but breaks the parser's pattern match.
-  const commentary = post.commentary.replace(/\(/g, '​(');
+  // silently truncates commentary there. Replace ASCII parens with Unicode fullwidth
+  // equivalents (U+FF08/FF09) which are visually identical in most fonts and are
+  // never parsed as annotation delimiters. LinkedIn strips zero-width spaces so
+  // that approach does not work.
+  const commentary = post.commentary
+    .replace(/\(/g, '（')
+    .replace(/\)/g, '）');
 
   const body: Record<string, unknown> = {
     author: memberUrn,
