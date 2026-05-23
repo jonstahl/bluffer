@@ -555,6 +555,12 @@ document.querySelectorAll('.subtab').forEach(btn => {
 document.getElementById('filter-status').onchange = renderPosts;
 document.getElementById('refresh-btn').onclick = loadPosts;
 
+// Auto-refresh: poll every 30s + refresh on tab focus
+setInterval(loadPosts, 30_000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadPosts();
+});
+
 // ── Compose ───────────────────────────────────────────────────────────────────
 
 document.getElementById('compose-kind').onchange = function() {
