@@ -1,5 +1,18 @@
 import { test, expect } from '@playwright/test';
 
+const PFX = '[pw] ';
+
+// Safety net: delete any leftover test posts even if a test failed mid-way
+test.afterAll(async ({ request }) => {
+  const r = await request.get('/api/posts');
+  if (!r.ok()) return;
+  const posts = await r.json() as { id: number; commentary: string }[];
+  await Promise.all(
+    posts.filter(p => p.commentary?.startsWith(PFX))
+      .map(p => request.delete(`/api/posts/${p.id}`))
+  );
+});
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#view-queue')).toHaveClass(/active/);
@@ -38,7 +51,7 @@ test('History tab does not show queued or draft posts', async ({ page }) => {
 test('filter by Queued hides scheduled posts', async ({ page }) => {
   // Create a post scheduled for a specific time (status = scheduled, not queued)
   await page.click('header nav a[data-view="compose"]');
-  const text = `Filter test scheduled ${Date.now()}`;
+  const text = `${PFX}filter scheduled ${Date.now()}`;
   await page.fill('#compose-commentary', text);
   await page.locator('input[name="compose-when"][value="schedule"]').check();
   const future = new Date(Date.now() + 3_600_000);

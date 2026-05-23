@@ -1,5 +1,18 @@
 import { test, expect } from '@playwright/test';
 
+const TEST_TIME = '22:22';
+
+// Safety net: delete any leftover test slots even if a test failed mid-way
+test.afterAll(async ({ request }) => {
+  const r = await request.get('/api/slots');
+  if (!r.ok()) return;
+  const slots = await r.json() as { id: number; time_local: string }[];
+  await Promise.all(
+    slots.filter(s => s.time_local === TEST_TIME)
+      .map(s => request.delete(`/api/slots/${s.id}`))
+  );
+});
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.click('header nav a[data-view="slots"]');
@@ -20,7 +33,7 @@ test('add slot requires at least one day selected', async ({ page }) => {
 });
 
 test('can add and remove a slot', async ({ page }) => {
-  const time = '14:30';
+  const time = TEST_TIME;
 
   // Add a slot for Wednesday at 14:30
   await page.click('#slot-days-none');

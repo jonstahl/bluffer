@@ -10,7 +10,7 @@ export async function statusRoutes(app: FastifyInstance): Promise<void> {
       'SELECT expires_at, member_urn FROM linkedin_auth WHERE id = 1',
     ).get() as { expires_at: string; member_urn: string } | undefined;
 
-    if (!auth) return { connected: false };
+    if (!auth) return { connected: false, owner_timezone: config.ownerTimezone };
 
     const expiresAt = new Date(auth.expires_at);
     const now = new Date();
@@ -24,6 +24,7 @@ export async function statusRoutes(app: FastifyInstance): Promise<void> {
       days_left: daysLeft,
       expired: now > expiresAt,
       reconnect_needed: daysLeft < 7,
+      owner_timezone: config.ownerTimezone,
     };
   });
 

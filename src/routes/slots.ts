@@ -43,7 +43,7 @@ export async function slotRoutes(app: FastifyInstance): Promise<void> {
       const allowed: (keyof SlotPatch)[] = ['day_of_week', 'time_local', 'timezone', 'enabled'];
       const updates: Record<string, unknown> = {};
       for (const k of allowed) {
-        if (k in req.body) updates[k] = req.body[k];
+        if (k in req.body) updates[k] = k === 'enabled' ? (req.body[k] ? 1 : 0) : req.body[k];
       }
 
       if (Object.keys(updates).length > 0) {
