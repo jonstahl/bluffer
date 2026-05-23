@@ -78,7 +78,7 @@
     .card h2 { font-size: 16px; margin-bottom: 14px; }
 
     label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
-    input, textarea, select {
+    input:not([type=radio]):not([type=checkbox]), textarea, select {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid var(--border);
@@ -173,6 +173,45 @@
 
     #app { display: none; }
 
+    .schedule-opt {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .schedule-opt:has(input:checked) {
+      border-color: var(--li);
+      background: #f0f6ff;
+    }
+    .schedule-opt input[type=radio] { margin-top: 2px; flex-shrink: 0; }
+    .schedule-opt-body { display: flex; flex-direction: column; gap: 2px; }
+    .schedule-opt-body strong { font-size: 14px; }
+    .schedule-opt-body span { font-size: 12px; color: var(--muted); }
+
+    .day-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      user-select: none;
+      transition: border-color .15s, background .15s;
+    }
+    .day-pill:has(input:checked) {
+      border-color: var(--li);
+      background: #e8f0fe;
+      color: var(--li);
+    }
+    .day-pill input { display: none; }
+
     #bookmarklet-code {
       font-family: monospace;
       font-size: 11px;
@@ -184,6 +223,28 @@
       margin-top: 8px;
       user-select: all;
     }
+
+    /* Edit modal */
+    #edit-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    #edit-modal-backdrop.open { display: flex; }
+    #edit-modal {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: min(560px, calc(100vw - 32px));
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,.25);
+    }
+    #edit-modal h2 { font-size: 16px; margin-bottom: 16px; }
   </style>
 </head>
 <body>
@@ -257,21 +318,29 @@
           <label>Commentary</label>
           <textarea id="compose-commentary" placeholder="What do you want to say?"></textarea>
         </div>
-        <div class="form-row inline">
-          <div>
-            <label>Schedule</label>
-            <select id="compose-schedule">
-              <option value="draft">Save as draft</option>
-              <optgroup label="Slots" id="compose-slots-group"></optgroup>
-              <option value="custom">Specific date/time…</option>
-            </select>
-          </div>
-          <div id="compose-datetime-row" style="display:none">
-            <label>Date &amp; time (local)</label>
-            <input type="datetime-local" id="compose-datetime">
+        <div class="form-row">
+          <label>When</label>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <label class="schedule-opt">
+              <input type="radio" name="compose-when" value="queue" checked>
+              <div class="schedule-opt-body">
+                <strong>Add to queue</strong>
+                <span>Post at the next open slot</span>
+              </div>
+            </label>
+            <label class="schedule-opt">
+              <input type="radio" name="compose-when" value="schedule">
+              <div class="schedule-opt-body">
+                <strong>Schedule for…</strong>
+                <span>Pick a specific date and time</span>
+              </div>
+            </label>
+            <div id="compose-datetime-row" style="display:none;padding-left:28px">
+              <input type="datetime-local" id="compose-datetime">
+            </div>
           </div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:4px">
+        <div style="display:flex;gap:10px;margin-top:16px">
           <button class="btn-primary" id="compose-submit">Save post</button>
           <button class="btn-ghost" id="compose-clear">Clear</button>
         </div>
@@ -286,19 +355,22 @@
         <ul id="slots-list"><li class="empty-state">No slots yet.</li></ul>
         <hr style="margin:16px 0;border:none;border-top:1px solid var(--border)">
         <h2>Add Slot</h2>
-        <div class="form-row inline">
-          <div>
-            <label>Day</label>
-            <select id="slot-dow">
-              <option value="0">Sunday</option>
-              <option value="1">Monday</option>
-              <option value="2">Tuesday</option>
-              <option value="3">Wednesday</option>
-              <option value="4">Thursday</option>
-              <option value="5">Friday</option>
-              <option value="6">Saturday</option>
-            </select>
+        <div class="form-row">
+          <label>Days</label>
+          <div id="slot-days" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            <label class="day-pill"><input type="checkbox" value="0"> Sun</label>
+            <label class="day-pill"><input type="checkbox" value="1"> Mon</label>
+            <label class="day-pill"><input type="checkbox" value="2"> Tue</label>
+            <label class="day-pill"><input type="checkbox" value="3"> Wed</label>
+            <label class="day-pill"><input type="checkbox" value="4"> Thu</label>
+            <label class="day-pill"><input type="checkbox" value="5"> Fri</label>
+            <label class="day-pill"><input type="checkbox" value="6"> Sat</label>
+            <button type="button" id="slot-days-all" class="btn-ghost btn-sm">All</button>
+            <button type="button" id="slot-days-weekdays" class="btn-ghost btn-sm">Weekdays</button>
+            <button type="button" id="slot-days-none" class="btn-ghost btn-sm">None</button>
           </div>
+        </div>
+        <div class="form-row inline">
           <div>
             <label>Time</label>
             <input type="time" id="slot-time" value="09:00">
@@ -337,6 +409,55 @@
     </div>
 
   </main>
+</div>
+
+<!-- Edit post modal — must be before <script> so elements exist when listeners attach -->
+<div id="edit-modal-backdrop">
+  <div id="edit-modal">
+    <h2>Edit Post</h2>
+    <div class="form-row">
+      <label>Commentary</label>
+      <textarea id="edit-commentary" style="min-height:120px"></textarea>
+    </div>
+    <div class="form-row" id="edit-source-row">
+      <label>Source URL</label>
+      <input type="url" id="edit-source-url">
+    </div>
+    <div class="form-row">
+      <label>When</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <label class="schedule-opt">
+          <input type="radio" name="edit-when" value="queue">
+          <div class="schedule-opt-body">
+            <strong>Add to queue</strong>
+            <span>Post at the next open slot</span>
+          </div>
+        </label>
+        <label class="schedule-opt">
+          <input type="radio" name="edit-when" value="schedule">
+          <div class="schedule-opt-body">
+            <strong>Schedule for…</strong>
+            <span>Pick a specific date and time</span>
+          </div>
+        </label>
+        <div id="edit-datetime-row" style="display:none;padding-left:28px">
+          <input type="datetime-local" id="edit-datetime">
+        </div>
+        <label class="schedule-opt">
+          <input type="radio" name="edit-when" value="draft">
+          <div class="schedule-opt-body">
+            <strong>Save as draft</strong>
+            <span>Don't schedule yet</span>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-primary" id="edit-save-btn">Save changes</button>
+      <button class="btn-ghost" id="edit-cancel-btn">Cancel</button>
+    </div>
+    <div class="error-msg" id="edit-error"></div>
+  </div>
 </div>
 
 <script>
@@ -440,6 +561,7 @@ function renderPosts() {
         ${p.source_url    ? `<a href="${escHtml(p.source_url)}" target="_blank" style="font-size:12px">Source ↗</a>` : ''}
       </div>
       <div class="post-item-actions">
+        ${['draft','queued','scheduled','failed'].includes(p.status) ? `<button class="btn-ghost btn-sm" onclick="openEditModal(${p.id})">Edit</button>` : ''}
         ${p.status === 'failed' ? `<button class="btn-ghost btn-sm" onclick="reschedulePost(${p.id})">Retry</button>` : ''}
         ${['draft','queued','scheduled','failed'].includes(p.status) ? `<button class="btn-danger btn-sm" onclick="deletePost(${p.id})">Delete</button>` : ''}
       </div>
@@ -458,6 +580,104 @@ async function reschedulePost(id) {
   await loadPosts();
 }
 
+// ── Edit modal ────────────────────────────────────────────────────────────────
+
+let editingPostId = null;
+
+document.querySelectorAll('input[name=edit-when]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.getElementById('edit-datetime-row').style.display =
+      radio.value === 'schedule' && radio.checked ? 'block' : 'none';
+  });
+});
+
+document.getElementById('edit-cancel-btn').onclick = closeEditModal;
+document.getElementById('edit-modal-backdrop').onclick = e => {
+  if (e.target === document.getElementById('edit-modal-backdrop')) closeEditModal();
+};
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEditModal(); });
+
+function openEditModal(id) {
+  const post = state.posts.find(p => p.id === id);
+  if (!post) return;
+  editingPostId = id;
+
+  document.getElementById('edit-commentary').value = post.commentary || '';
+
+  const sourceRow = document.getElementById('edit-source-row');
+  if (post.kind === 'repost') {
+    sourceRow.style.display = 'block';
+    document.getElementById('edit-source-url').value = post.source_url || '';
+  } else {
+    sourceRow.style.display = 'none';
+  }
+
+  // Set the "when" radio based on current status
+  let when = 'draft';
+  if (post.status === 'queued') when = 'queue';
+  else if (post.status === 'scheduled') when = 'schedule';
+  document.querySelector(`input[name=edit-when][value=${when}]`).checked = true;
+
+  const dtRow = document.getElementById('edit-datetime-row');
+  if (when === 'schedule' && post.scheduled_for) {
+    dtRow.style.display = 'block';
+    // Convert UTC ISO to local datetime-local value
+    const d = new Date(post.scheduled_for);
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString().slice(0, 16);
+    document.getElementById('edit-datetime').value = local;
+  } else {
+    dtRow.style.display = 'none';
+    document.getElementById('edit-datetime').value = '';
+  }
+
+  document.getElementById('edit-error').textContent = '';
+  document.getElementById('edit-modal-backdrop').classList.add('open');
+  document.getElementById('edit-commentary').focus();
+}
+
+function closeEditModal() {
+  editingPostId = null;
+  document.getElementById('edit-modal-backdrop').classList.remove('open');
+}
+
+document.getElementById('edit-save-btn').onclick = async () => {
+  if (!editingPostId) return;
+  const commentary = document.getElementById('edit-commentary').value.trim();
+  const when = document.querySelector('input[name=edit-when]:checked').value;
+  const errEl = document.getElementById('edit-error');
+  errEl.textContent = '';
+
+  const body = { commentary };
+
+  const post = state.posts.find(p => p.id === editingPostId);
+  if (post?.kind === 'repost') {
+    body.source_url = document.getElementById('edit-source-url').value.trim() || null;
+  }
+
+  if (when === 'queue') {
+    body.queue = true;
+  } else if (when === 'schedule') {
+    const dt = document.getElementById('edit-datetime').value;
+    if (!dt) { errEl.textContent = 'Pick a date and time.'; return; }
+    body.scheduled_for = new Date(dt).toISOString();
+    body.status = 'scheduled';
+  } else {
+    body.status = 'draft';
+    body.scheduled_for = null;
+    body.slot_id = null;
+  }
+
+  const r = await api('PATCH', `/api/posts/${editingPostId}`, body);
+  if (!r) return;
+  if (r.ok) {
+    closeEditModal();
+    await loadPosts();
+  } else {
+    errEl.textContent = r.data?.error || 'Failed to save.';
+  }
+};
+
 document.getElementById('filter-status').onchange = loadPosts;
 document.getElementById('refresh-btn').onclick = loadPosts;
 
@@ -467,33 +687,30 @@ document.getElementById('compose-kind').onchange = function() {
   document.getElementById('compose-source-row').style.display = this.value === 'repost' ? 'block' : 'none';
 };
 
-document.getElementById('compose-schedule').onchange = function() {
-  document.getElementById('compose-datetime-row').style.display = this.value === 'custom' ? 'block' : 'none';
-};
+document.querySelectorAll('input[name=compose-when]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.getElementById('compose-datetime-row').style.display =
+      radio.value === 'schedule' && radio.checked ? 'block' : 'none';
+  });
+});
 
-async function loadSlotsForCompose() {
-  const grp = document.getElementById('compose-slots-group');
-  grp.innerHTML = state.slots
-    .filter(s => s.enabled)
-    .map(s => `<option value="slot:${s.id}">${DAYS[s.day_of_week]} ${s.time_local} (${s.timezone})</option>`)
-    .join('');
-}
+function loadSlotsForCompose() { /* no-op — slots no longer shown in compose */ }
 
 document.getElementById('compose-submit').onclick = async () => {
   const kind = document.getElementById('compose-kind').value;
   const commentary = document.getElementById('compose-commentary').value.trim();
   const source_url = document.getElementById('compose-source-url').value.trim() || undefined;
-  const schedule = document.getElementById('compose-schedule').value;
+  const when = document.querySelector('input[name=compose-when]:checked').value;
   const errEl = document.getElementById('compose-error');
   errEl.textContent = '';
 
   const body = { kind, commentary, source_url };
 
-  if (schedule.startsWith('slot:')) {
-    body.slot_id = parseInt(schedule.split(':')[1]);
-  } else if (schedule === 'custom') {
+  if (when === 'queue') {
+    body.queue = true;
+  } else {
     const dt = document.getElementById('compose-datetime').value;
-    if (!dt) { errEl.textContent = 'Pick a date/time.'; return; }
+    if (!dt) { errEl.textContent = 'Pick a date and time.'; return; }
     body.scheduled_for = new Date(dt).toISOString();
   }
 
@@ -502,10 +719,11 @@ document.getElementById('compose-submit').onclick = async () => {
   if (r.ok) {
     document.getElementById('compose-commentary').value = '';
     document.getElementById('compose-source-url').value = '';
-    document.getElementById('compose-schedule').value = 'draft';
+    document.getElementById('compose-datetime').value = '';
     document.getElementById('compose-datetime-row').style.display = 'none';
     document.getElementById('compose-source-row').style.display = 'none';
     document.getElementById('compose-kind').value = 'original';
+    document.querySelector('input[name=compose-when][value=queue]').checked = true;
     document.querySelectorAll('header nav a[data-view]').forEach(x => x.classList.remove('active'));
     document.querySelector('header nav a[data-view="queue"]').classList.add('active');
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -562,24 +780,37 @@ async function deleteSlot(id) {
   loadSlotsForCompose();
 }
 
+document.getElementById('slot-days-all').onclick = () =>
+  document.querySelectorAll('#slot-days input[type=checkbox]').forEach(cb => cb.checked = true);
+document.getElementById('slot-days-weekdays').onclick = () =>
+  document.querySelectorAll('#slot-days input[type=checkbox]').forEach(cb => cb.checked = [1,2,3,4,5].includes(parseInt(cb.value)));
+document.getElementById('slot-days-none').onclick = () =>
+  document.querySelectorAll('#slot-days input[type=checkbox]').forEach(cb => cb.checked = false);
+
 document.getElementById('slot-add-btn').onclick = async () => {
-  const day_of_week = parseInt(document.getElementById('slot-dow').value);
+  const days = [...document.querySelectorAll('#slot-days input[type=checkbox]:checked')]
+    .map(cb => parseInt(cb.value));
   const time_local = document.getElementById('slot-time').value;
   const timezone = document.getElementById('slot-tz').value.trim() || 'America/Chicago';
   const errEl = document.getElementById('slot-error');
   errEl.textContent = '';
 
+  if (days.length === 0) { errEl.textContent = 'Pick at least one day.'; return; }
   if (!time_local) { errEl.textContent = 'Pick a time.'; return; }
 
-  const r = await api('POST', '/api/slots', { day_of_week, time_local, timezone });
-  if (!r) return;
-  if (r.ok) {
-    document.getElementById('slot-time').value = '09:00';
-    await loadSlots();
-    loadSlotsForCompose();
-  } else {
-    errEl.textContent = r.data.error || 'Failed to add slot.';
+  const results = await Promise.all(
+    days.map(day_of_week => api('POST', '/api/slots', { day_of_week, time_local, timezone }))
+  );
+  const failed = results.filter(r => r && !r.ok);
+  if (failed.length) {
+    errEl.textContent = failed[0].data.error || 'Failed to add slot.';
+    return;
   }
+
+  document.getElementById('slot-time').value = '09:00';
+  document.querySelectorAll('#slot-days input[type=checkbox]').forEach(cb => cb.checked = false);
+  await loadSlots();
+  loadSlotsForCompose();
 };
 
 // ── Status / Settings ─────────────────────────────────────────────────────────

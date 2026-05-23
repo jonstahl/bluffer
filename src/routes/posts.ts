@@ -35,11 +35,12 @@ type CreateBody = {
   source_urn?: string;
   scheduled_for?: string;
   slot_id?: number;
+  queue?: boolean;   // true = find the earliest upcoming slot automatically
 };
 
 type PatchBody = Partial<
   Pick<Post, 'commentary' | 'status' | 'scheduled_for' | 'slot_id' | 'source_url' | 'source_urn'>
->;
+> & { queue?: boolean };
 
 export async function postRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: { status?: string } }>(
@@ -71,12 +72,29 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
         source_urn,
         scheduled_for,
         slot_id,
+        queue,
       } = req.body;
 
       let status: Post['status'] = 'draft';
       let resolvedScheduledFor: string | null = scheduled_for ?? null;
+      let resolvedSlotId: number | null = slot_id ?? null;
 
-      if (slot_id) {
+      if (queue) {
+        // Find the earliest upcoming slot across all enabled slots
+        const slots = db.prepare(
+          'SELECT * FROM schedule_slots WHERE enabled = 1',
+        ).all() as Slot[];
+        let earliest: Date | null = null;
+        for (const s of slots) {
+          const next = nextSlotDateTime(s.day_of_week, s.time_local, s.timezone);
+          if (next && (!earliest || next < earliest)) {
+            earliest = next;
+            resolvedSlotId = s.id;
+          }
+        }
+        resolvedScheduledFor = earliest ? earliest.toISOString() : null;
+        status = resolvedScheduledFor ? 'queued' : 'draft';
+      } else if (slot_id) {
         const slot = db.prepare('SELECT * FROM schedule_slots WHERE id = ? AND enabled = 1').get(slot_id) as Slot | undefined;
         if (slot && !resolvedScheduledFor) {
           const next = nextSlotDateTime(slot.day_of_week, slot.time_local, slot.timezone);
@@ -94,7 +112,7 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
         kind, commentary,
         source_url ?? null, source_urn ?? null,
         status, resolvedScheduledFor,
-        slot_id ?? null,
+        resolvedSlotId,
       );
 
       return reply.status(201).send(
@@ -112,12 +130,35 @@ export async function postRoutes(app: FastifyInstance): Promise<void> {
       const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(id) as Post | undefined;
       if (!post) return reply.status(404).send({ error: 'Not found' });
 
-      const allowed: (keyof PatchBody)[] = [
-        'commentary', 'status', 'scheduled_for', 'slot_id', 'source_url', 'source_urn',
-      ];
       const updates: Record<string, unknown> = {};
-      for (const k of allowed) {
+
+      // Always apply content edits regardless of scheduling choice
+      const contentFields: (keyof Omit<PatchBody, 'queue' | 'status' | 'scheduled_for' | 'slot_id'>)[] = [
+        'commentary', 'source_url', 'source_urn',
+      ];
+      for (const k of contentFields) {
         if (k in req.body) updates[k] = req.body[k as keyof PatchBody];
+      }
+
+      // Apply scheduling
+      if (req.body.queue) {
+        const slots = db.prepare('SELECT * FROM schedule_slots WHERE enabled = 1').all() as Slot[];
+        let earliest: Date | null = null;
+        let earliestSlotId: number | null = null;
+        for (const s of slots) {
+          const next = nextSlotDateTime(s.day_of_week, s.time_local, s.timezone);
+          if (next && (!earliest || next < earliest)) { earliest = next; earliestSlotId = s.id; }
+        }
+        updates.status = earliest ? 'queued' : 'draft';
+        updates.scheduled_for = earliest ? earliest.toISOString() : null;
+        updates.slot_id = earliestSlotId;
+      } else {
+        const schedFields: (keyof Omit<PatchBody, 'queue' | 'commentary' | 'source_url' | 'source_urn'>)[] = [
+          'status', 'scheduled_for', 'slot_id',
+        ];
+        for (const k of schedFields) {
+          if (k in req.body) updates[k] = req.body[k as keyof PatchBody];
+        }
       }
 
       if (Object.keys(updates).length > 0) {
