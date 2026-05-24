@@ -68,6 +68,7 @@
       <ul id="posts-list" class="list-none m-0 p-0">
         <li class="empty-state">Loading…</li>
       </ul>
+      <div id="history-pagination"></div>
     </div>
 
     <!-- Compose view -->
@@ -271,6 +272,7 @@ let state = {
   status: null,
   ownerTimezone: 'America/Chicago',
   activeSubtab: 'active',
+  historyPage: 1,
 };
 
 async function api(method, path, body) {
@@ -377,6 +379,7 @@ async function loadPosts() {
 
 function renderPosts() {
   const list = document.getElementById('posts-list');
+  const paginationEl = document.getElementById('history-pagination');
   const ACTIVE = ['draft', 'queued', 'scheduled', 'publishing'];
   const isHistory = state.activeSubtab === 'history';
   const filterEl = document.getElementById('filter-status');
@@ -397,8 +400,55 @@ function renderPosts() {
   if (!posts.length) {
     const msg = state.activeSubtab === 'history' ? 'No history yet.' : 'Queue is empty.';
     list.innerHTML = `<li class="empty-state"><div class="text-4xl mb-2">📭</div><div>${msg}</div></li>`;
+    paginationEl.innerHTML = '';
     return;
   }
+
+  if (isHistory) {
+    const PAGE_SIZE = 20;
+    const total = posts.length;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    state.historyPage = Math.min(Math.max(1, state.historyPage), totalPages);
+    const page = state.historyPage;
+    const start = (page - 1) * PAGE_SIZE;
+    const pagePosts = posts.slice(start, start + PAGE_SIZE);
+    const end = start + pagePosts.length;
+
+    list.innerHTML = pagePosts.map(p => {
+      const text = p.commentary || '(no text)';
+      const needsExpand = text.length > 180 || text.includes('\n');
+      const isExpanded = expandedHistoryPosts.has(p.id);
+      const liUrl = p.published_urn ? `https://www.linkedin.com/feed/update/${p.published_urn}/` : null;
+      return `
+        <li class="history-item" data-id="${p.id}" data-status="${p.status}">
+          <div class="history-item-top">
+            <span class="status-badge status-${p.status}">${p.status}</span>
+            <span class="kind">${p.kind}</span>
+            ${p.published_at ? `<span>✅ ${fmtDt(p.published_at)}</span>` : ''}
+            ${liUrl ? `<a href="${escHtml(liUrl)}" target="_blank" class="history-li-link">View on LinkedIn ↗</a>` : ''}
+            <span style="flex:1"></span>
+            ${p.status === 'published' ? `<button class="btn-ghost btn-sm" onclick="removeFromHistory(${p.id})">Remove</button>` : ''}
+            ${p.status === 'published' && p.published_urn ? `<button class="btn-danger btn-sm" onclick="deletePostFromLinkedIn(${p.id})">Delete from LI</button>` : ''}
+          </div>
+          <div class="history-text${isExpanded ? ' expanded' : ''}">${escHtml(text)}</div>
+          ${needsExpand ? `<button class="history-expand-btn" onclick="toggleHistoryExpand(${p.id})">${isExpanded ? '↑ Show less' : '↓ Show more'}</button>` : ''}
+          ${p.error ? `<div style="font-size:12px;color:var(--danger);margin-top:4px">⚠ ${escHtml(p.error)}</div>` : ''}
+          ${p.source_url ? `<a href="${escHtml(p.source_url)}" target="_blank" style="font-size:12px;color:var(--muted)">Source ↗</a>` : ''}
+        </li>
+      `;
+    }).join('');
+
+    paginationEl.innerHTML = totalPages > 1 ? `
+      <div class="history-pagination">
+        <button class="btn-ghost btn-sm" onclick="setHistoryPage(${page - 1})"${page === 1 ? ' disabled' : ''}>← Prev</button>
+        <span>${start + 1}–${end} of ${total} posts</span>
+        <button class="btn-ghost btn-sm" onclick="setHistoryPage(${page + 1})"${page === totalPages ? ' disabled' : ''}>Next →</button>
+      </div>
+    ` : '';
+    return;
+  }
+
+  paginationEl.innerHTML = '';
   list.innerHTML = posts.map(p => `
     <li class="post-item" data-id="${p.id}" data-status="${p.status}"${['queued','scheduled'].includes(p.status) ? ' draggable="true"' : ''}>
       <div class="post-item-header">
@@ -466,9 +516,32 @@ async function bumpPost(id) {
   await reorderPosts(ids);
 }
 
+function setHistoryPage(page) {
+  state.historyPage = page;
+  renderPosts();
+  document.getElementById('posts-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleHistoryExpand(id) {
+  const item = document.querySelector(`#posts-list [data-id="${id}"]`);
+  if (!item) return;
+  const textEl = item.querySelector('.history-text');
+  const btn = item.querySelector('.history-expand-btn');
+  if (expandedHistoryPosts.has(id)) {
+    expandedHistoryPosts.delete(id);
+    textEl.classList.remove('expanded');
+    if (btn) btn.textContent = '↓ Show more';
+  } else {
+    expandedHistoryPosts.add(id);
+    textEl.classList.add('expanded');
+    if (btn) btn.textContent = '↑ Show less';
+  }
+}
+
 // ── Drag-and-drop reorder ─────────────────────────────────────────────────────
 
 let dragSrcId = null;
+const expandedHistoryPosts = new Set();
 
 const postsList = document.getElementById('posts-list');
 
@@ -617,6 +690,7 @@ document.querySelectorAll('.subtab').forEach(btn => {
     document.querySelectorAll('.subtab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     state.activeSubtab = btn.dataset.subtab;
+    if (btn.dataset.subtab === 'history') state.historyPage = 1;
     renderPosts();
   });
 });

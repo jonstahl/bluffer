@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.3 — 2026-05-24
+
+### Features
+- **History pagination** — 20 posts per page with Prev/Next controls and a post count indicator; resets to page 1 when switching to the History tab
+- **Dense history rows** — collapsed to 3 lines with a "↓ Show more / ↑ Show less" toggle; expands in-place without a full re-render
+- **View on LinkedIn** — each published history entry links directly to the live post on LinkedIn
+- **History sort** — newest-first by published date
+
 ## v1.0.2 — 2026-05-23
 
 ### Features
