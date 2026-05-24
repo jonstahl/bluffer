@@ -25,14 +25,22 @@ export async function postToLinkedIn(
   memberUrn: string,
   post: PostRow,
 ): Promise<string> {
-  // LinkedIn's little-text parser treats '(' as an annotation-reference start and
-  // silently truncates commentary there. Replace ASCII parens with Unicode fullwidth
-  // equivalents (U+FF08/FF09) which are visually identical in most fonts and are
-  // never parsed as annotation delimiters. LinkedIn strips zero-width spaces so
-  // that approach does not work.
+  // LinkedIn's 'little' text format reserves several characters that must be
+  // backslash-escaped or the parser silently truncates commentary at that point.
+  // Reserved chars per spec: \ | { } [ ] ( ) < > @ * _ ~ #
+  // # * _ ~ are left unescaped — hashtags/bold/italic/strikethrough are intentional.
   const commentary = post.commentary
-    .replace(/\(/g, '（')
-    .replace(/\)/g, '）');
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/\{/g, '\\{')
+    .replace(/\}/g, '\\}')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
+    .replace(/</g, '\\<')
+    .replace(/>/g, '\\>')
+    .replace(/@/g, '\\@');
 
   const body: Record<string, unknown> = {
     author: memberUrn,
