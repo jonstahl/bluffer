@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { config } from '../config';
+import { getDb } from '../db';
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: { password: string } }>(
@@ -9,6 +10,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     async (req, reply) => {
       if (!config.ownerPasswordHash) {
         return reply.status(500).send({ error: 'OWNER_PASSWORD_HASH not configured' });
+      }
+      // Once a passkey is registered, password login is permanently disabled.
+      const db = getDb();
+      const { n } = db.prepare('SELECT COUNT(*) as n FROM passkey_credentials').get() as { n: number };
+      if (n > 0) {
+        return reply.status(403).send({ error: 'Password login is disabled — use your passkey' });
       }
       const ok = await bcrypt.compare(req.body.password, config.ownerPasswordHash);
       if (!ok) return reply.status(400).send({ error: 'Invalid password' });

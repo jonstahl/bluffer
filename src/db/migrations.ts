@@ -43,5 +43,13 @@ export function runMigrations(db: Database.Database): void {
       BEGIN
         UPDATE posts SET updated_at = datetime('now') WHERE id = NEW.id;
       END;
+
+    CREATE TABLE IF NOT EXISTS passkey_credentials (
+      id         TEXT    PRIMARY KEY,
+      public_key BLOB    NOT NULL,
+      counter    INTEGER NOT NULL DEFAULT 0,
+      transports TEXT,
+      created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }

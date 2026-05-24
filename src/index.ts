@@ -14,6 +14,7 @@ import { statusRoutes } from './routes/status';
 import { postRoutes } from './routes/posts';
 import { slotRoutes } from './routes/slots';
 import { captureRoutes } from './routes/capture';
+import { passkeyRoutes } from './routes/passkey';
 import { startScheduler } from './scheduler';
 
 const app = Fastify({
@@ -62,6 +63,7 @@ app.register(statusRoutes);
 app.register(postRoutes);
 app.register(slotRoutes);
 app.register(captureRoutes);
+app.register(passkeyRoutes);
 
 // Initialize DB (runs migrations) before accepting traffic
 getDb();

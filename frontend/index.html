@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#0a66c2">
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/styles.css">
+  <script src="https://unpkg.com/@simplewebauthn/browser@13/dist/bundle/index.es5.umd.min.js"></script>
 </head>
 <body>
 
@@ -14,12 +15,19 @@
 <div id="login-screen" class="min-h-screen flex items-center justify-center bg-[#f3f2ef]">
   <div class="bg-white border border-gray-200 border-t-4 border-t-li rounded-xl p-8 w-[360px] shadow-xl">
     <h1 class="text-2xl font-bold text-li mb-6 text-center">Bluffer</h1>
-    <div class="form-row mb-4">
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="Owner password" autocomplete="current-password">
+    <!-- Passkey login (shown when a passkey is registered) -->
+    <div id="login-passkey-section" style="display:none">
+      <button class="btn-primary w-full" id="login-passkey-btn">Sign in with passkey</button>
     </div>
-    <button class="btn-primary w-full" id="login-btn">Sign in</button>
-    <div class="error-msg" id="login-error"></div>
+    <!-- Password login (shown when no passkey registered) -->
+    <div id="login-password-section" style="display:none">
+      <div class="form-row mb-4">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Owner password" autocomplete="current-password">
+      </div>
+      <button class="btn-primary w-full" id="login-btn">Sign in</button>
+    </div>
+    <div class="error-msg mt-3" id="login-error"></div>
   </div>
 </div>
 
@@ -165,6 +173,13 @@
 
     <!-- Settings view -->
     <div id="view-settings" class="view">
+      <div class="card">
+        <h2 class="text-base font-semibold mb-3">Security</h2>
+        <div id="passkey-status" class="text-sm text-gray-500 mb-3">Checking…</div>
+        <button class="btn-ghost btn-sm" id="register-passkey-btn" style="display:none">Register passkey</button>
+        <div class="error-msg" id="passkey-error"></div>
+      </div>
+
       <div class="card" id="li-status-card">
         <h2 class="text-base font-semibold mb-4">LinkedIn Connection</h2>
         <div id="li-status-body">Loading…</div>
@@ -265,16 +280,26 @@ async function api(method, path, body) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(path, opts);
-  if (res.status === 401) { showLogin(); return null; }
+  if (res.status === 401) { void showLogin(); return null; }
   if (res.status === 204) return null;
   return res.json().then(d => ({ ok: res.ok, status: res.status, data: d }));
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
-function showLogin() {
+async function showLogin() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  document.getElementById('login-error').textContent = '';
+  // Show the right login method based on whether a passkey is registered
+  try {
+    const res = await fetch('/auth/passkey/available');
+    const { hasPasskey } = await res.json();
+    document.getElementById('login-passkey-section').style.display = hasPasskey ? 'block' : 'none';
+    document.getElementById('login-password-section').style.display = hasPasskey ? 'none' : 'block';
+  } catch {
+    document.getElementById('login-password-section').style.display = 'block';
+  }
 }
 
 function showApp() {
@@ -282,6 +307,26 @@ function showApp() {
   document.getElementById('app').style.display = 'block';
   loadAll();
 }
+
+document.getElementById('login-passkey-btn').onclick = async () => {
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  try {
+    const optRes = await fetch('/auth/passkey/login/options');
+    const options = await optRes.json();
+    const credential = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
+    const verifyRes = await fetch('/auth/passkey/login/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credential),
+    });
+    const result = await verifyRes.json();
+    if (verifyRes.ok) { showApp(); }
+    else { errEl.textContent = result.error || 'Passkey authentication failed'; }
+  } catch (e) {
+    errEl.textContent = e.name === 'NotAllowedError' ? 'Cancelled.' : (e.message || 'Passkey error');
+  }
+};
 
 document.getElementById('login-btn').onclick = async () => {
   const pw = document.getElementById('login-password').value;
@@ -296,7 +341,7 @@ document.getElementById('login-password').addEventListener('keydown', e => {
 
 document.getElementById('logout-btn').onclick = async () => {
   await api('POST', '/auth/logout');
-  showLogin();
+  void showLogin();
 };
 
 // ── Navigation ───────────────────────────────────────────────────────────────
@@ -718,16 +763,51 @@ document.getElementById('slot-add-btn').onclick = async () => {
 // ── Status / Settings ─────────────────────────────────────────────────────────
 
 async function loadStatus() {
-  const r = await api('GET', '/api/status');
-  if (!r) return;
-  state.status = r.data;
-  if (r.data.owner_timezone) {
-    state.ownerTimezone = r.data.owner_timezone;
-    document.getElementById('slot-tz').value = r.data.owner_timezone;
+  const [statusRes, passkeyRes] = await Promise.all([
+    api('GET', '/api/status'),
+    fetch('/auth/passkey/available').then(r => r.json()).catch(() => ({ hasPasskey: false })),
+  ]);
+  if (!statusRes) return;
+  state.status = statusRes.data;
+  if (statusRes.data.owner_timezone) {
+    state.ownerTimezone = statusRes.data.owner_timezone;
+    document.getElementById('slot-tz').value = statusRes.data.owner_timezone;
   }
   renderStatus();
-  renderBookmarklet(); // bookmarklet works regardless of LinkedIn connection
+  renderBookmarklet();
+  renderPasskeyStatus(passkeyRes.hasPasskey);
 }
+
+function renderPasskeyStatus(hasPasskey) {
+  document.getElementById('passkey-status').textContent = hasPasskey
+    ? 'Passkey registered. Password login is disabled.'
+    : 'No passkey registered. Log in with your password until you register one.';
+  document.getElementById('register-passkey-btn').style.display = hasPasskey ? 'none' : 'inline-block';
+}
+
+document.getElementById('register-passkey-btn').onclick = async () => {
+  const errEl = document.getElementById('passkey-error');
+  errEl.textContent = '';
+  try {
+    const optRes = await fetch('/auth/passkey/register/options');
+    if (!optRes.ok) { errEl.textContent = (await optRes.json()).error || 'Failed to get options'; return; }
+    const options = await optRes.json();
+    const credential = await SimpleWebAuthnBrowser.startRegistration({ optionsJSON: options });
+    const verifyRes = await fetch('/auth/passkey/register/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credential),
+    });
+    const result = await verifyRes.json();
+    if (verifyRes.ok) {
+      renderPasskeyStatus(true);
+    } else {
+      errEl.textContent = result.error || 'Registration failed';
+    }
+  } catch (e) {
+    errEl.textContent = e.name === 'NotAllowedError' ? 'Cancelled.' : (e.message || 'Passkey error');
+  }
+};
 
 function renderStatus() {
   const el = document.getElementById('li-status-body');
@@ -831,7 +911,7 @@ function fmtDt(iso) {
 
 (async () => {
   const r = await fetch('/api/status', { credentials: 'include' });
-  if (r.status === 401) { showLogin(); return; }
+  if (r.status === 401) { await showLogin(); return; }
   showApp();
 
   // Bookmarklet redirect: ?source=URL&urn=URN

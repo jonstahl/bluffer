@@ -22,6 +22,7 @@ multi-device, plus a bookmarklet for reposts-with-commentary).
   `X-Restli-Protocol-Version: 2.0.0` headers.
 - The bookmarklet captures URL + the owner's commentary only — never scrape post text.
 - `/api/capture` is the only endpoint that allows the `linkedin.com` CORS origin.
+- When implementing or troubleshooting, always consult documentation first
 
 ## Testing
 - **When making code changes, always update the Playwright tests in `tests/` if the change affects
