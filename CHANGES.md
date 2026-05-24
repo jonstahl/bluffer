@@ -1,9 +1,13 @@
 # Changelog
 
-## unreleased
+## v1.0.2 — 2026-05-23
 
 ### Features
 - **Passkey authentication** — replaces password login with WebAuthn passkey (Touch ID / Face ID / hardware key). Register from Settings while logged in; once registered, password login is permanently disabled. Break-glass recovery via `fly ssh console`.
+
+### Testing
+- Playwright tests for passkey API endpoints and Settings Security card
+- `TEST_PASSWORD` env var now required (no hardcoded default) for `npx playwright test`
 
 ## v1.0.1 — 2026-05-23
 
