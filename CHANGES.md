@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.3 — 2026-05-24
 
 ### Features
 - **History pagination** — 20 posts per page with Prev/Next controls and a post count indicator; resets to page 1 when switching to the History tab
