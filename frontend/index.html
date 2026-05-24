@@ -6,6 +6,9 @@
   <title>Bluffer</title>
   <meta name="theme-color" content="#0a66c2">
   <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/@simplewebauthn/browser@13/dist/bundle/index.es5.umd.min.js"></script>
 </head>
@@ -13,8 +16,9 @@
 
 <!-- Login screen -->
 <div id="login-screen" class="min-h-screen flex items-center justify-center bg-[#f3f2ef]">
-  <div class="bg-white border border-gray-200 border-t-4 border-t-li rounded-xl p-8 w-[360px] shadow-xl">
-    <h1 class="text-2xl font-bold text-li mb-6 text-center">Bluffer</h1>
+  <div style="background:#fff;border:1.5px solid #e4e1db;border-radius:14px;padding:36px 32px;width:360px;box-shadow:0 4px 24px rgba(28,25,23,.08);">
+    <h1 style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;letter-spacing:-.03em;color:#1c1917;margin-bottom:6px;text-align:center;">Bluffer</h1>
+    <p style="text-align:center;font-size:13px;color:#a8a29e;margin-bottom:28px;">LinkedIn post scheduler</p>
     <!-- Passkey login (shown when a passkey is registered) -->
     <div id="login-passkey-section" style="display:none">
       <button class="btn-primary w-full" id="login-passkey-btn">Sign in with passkey</button>
@@ -37,7 +41,7 @@
     ⚠ LinkedIn token expires soon. <a href="/auth/linkedin">Reconnect now →</a>
   </div>
 
-  <header class="bg-gradient-to-r from-li to-li-dark text-white px-5 flex items-center justify-between h-[52px] sticky top-0 z-[100] shadow-md">
+  <header class="px-5 flex items-center justify-between h-[52px] sticky top-0 z-[100]" style="box-shadow:0 1px 0 #292524;">
     <h1 class="text-lg font-bold tracking-tight">Bluffer</h1>
     <nav class="flex gap-3 items-center">
       <a data-view="queue" class="active">Queue</a>
@@ -399,7 +403,7 @@ function renderPosts() {
   }
   if (!posts.length) {
     const msg = state.activeSubtab === 'history' ? 'No history yet.' : 'Queue is empty.';
-    list.innerHTML = `<li class="empty-state"><div class="text-4xl mb-2">📭</div><div>${msg}</div></li>`;
+    list.innerHTML = `<li class="empty-state">${msg}</li>`;
     paginationEl.innerHTML = '';
     return;
   }
@@ -778,7 +782,7 @@ async function loadSlots() {
 function renderSlots() {
   const list = document.getElementById('slots-list');
   if (!state.slots.length) {
-    list.innerHTML = '<li class="empty-state"><div class="text-4xl mb-2">🗓</div><div>No slots yet. Add one below.</div></li>';
+    list.innerHTML = '<li class="empty-state">No slots yet. Add one below.</li>';
     return;
   }
   list.innerHTML = state.slots.map(s => {

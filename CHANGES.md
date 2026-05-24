@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.4 — 2026-05-24
+
+### Visual redesign
+- **Typography** — switched to DM Sans (body) + Syne 800 (wordmark); warmer, more characterful than system-ui
+- **Header** — dark charcoal background replaces LinkedIn-blue gradient; feels like a tool, not a clone
+- **Background** — warm stone `#f5f4f1` replaces LinkedIn's cold grey
+- **Login screen** — Syne wordmark with subtitle; cleaner card proportions
+- **Status badges** — bordered pills with per-status color pairs; less aggressive than filled blobs
+- **Cards & post items** — warmer borders, subtler shadows, tighter padding
+- **Subtabs** — black underline on active tab; quieter inactive state
+- **Modal** — blur backdrop, deeper shadow
+- **Empty states** — clean typographic text; removed emoji placeholders
+- **Drag handle** — lighter grey, less visually noisy
+
 ## v1.0.3 — 2026-05-24
 
 ### Features
