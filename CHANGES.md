@@ -1,5 +1,10 @@
 # Changelog
 
+## unreleased
+
+### Features
+- **Passkey authentication** — replaces password login with WebAuthn passkey (Touch ID / Face ID / hardware key). Register from Settings while logged in; once registered, password login is permanently disabled. Break-glass recovery via `fly ssh console`.
+
 ## v1.0.1 — 2026-05-23
 
 ### Features

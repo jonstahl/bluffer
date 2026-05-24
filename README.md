@@ -114,6 +114,34 @@ Uncomment `LITESTREAM_S3_ENDPOINT` in `.env.example` / secrets for non-AWS stora
 2. Drag the **📤 Bluffer Capture** link to your bookmarks bar.
 3. While on any LinkedIn post, click the bookmarklet — a new Bluffer tab opens with the post URL pre-filled as a repost.
 
+## Security
+
+Bluffer uses a two-phase authentication setup:
+
+### Phase 1 — Password (initial access)
+
+The password is set via `OWNER_PASSWORD_HASH` in your environment/secrets (see [Generating secrets](#generating-secrets) above). It's the only way to log in until you register a passkey.
+
+### Phase 2 — Passkey (recommended)
+
+Once you're logged in, go to **Settings → Security** and click **Register passkey**. This walks you through a WebAuthn registration (Touch ID, Face ID, Windows Hello, or a hardware key like YubiKey). After registration:
+
+- Password login is **permanently disabled** — the app rejects it even if the correct password is supplied.
+- The login screen switches to a single "Sign in with passkey" button.
+- Your passkey credential is stored in the local SQLite database.
+
+**Register your passkey immediately after first login** — before you deploy to a shared or untrusted environment.
+
+### Break-glass recovery
+
+If you lose access to your passkey, you can recover via the Fly.io console:
+
+```bash
+fly ssh console
+sqlite3 /data/bluffer.db "DELETE FROM passkey_credentials;"
+# Password login is now re-enabled — log in, then re-register a passkey
+```
+
 ## LinkedIn token expiry
 
 LinkedIn access tokens last ~60 days and cannot be refreshed programmatically (without approved Marketing Developer Platform access). When your token is about to expire:
