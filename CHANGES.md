@@ -1,11 +1,13 @@
 # Changelog
 
-## unreleased
-### Bug fixes
-- Fixed post body not rendering line breaks in the queue/history list
+## v1.0.1 — 2026-05-23
 
 ### Features
-- Added post it now option to edit dialog
+- Added "Post it now!" option to the edit dialog
+
+### Bug fixes
+- Fixed post body not rendering line breaks in the queue/history list
+- Fixed parentheses (and other reserved characters) in post text causing LinkedIn to silently truncate the post — properly escapes LinkedIn's `little` text format reserved characters (`( ) { } [ ] | < > @ \`) before publishing
 
 ## v1.0 — 2026-05-23
 
