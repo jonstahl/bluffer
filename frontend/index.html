@@ -382,11 +382,18 @@ function renderPosts() {
   const filterEl = document.getElementById('filter-status');
   filterEl.style.visibility = isHistory ? 'hidden' : 'visible';
   const statusFilter = filterEl.value;
-  const posts = state.posts.filter(p =>
+  let posts = state.posts.filter(p =>
     isHistory
       ? !ACTIVE.includes(p.status)
       : ACTIVE.includes(p.status) && (!statusFilter || p.status === statusFilter)
   );
+  if (isHistory) {
+    posts = posts.slice().sort((a, b) => {
+      const ta = a.published_at ?? a.created_at ?? '';
+      const tb = b.published_at ?? b.created_at ?? '';
+      return tb < ta ? -1 : tb > ta ? 1 : 0;
+    });
+  }
   if (!posts.length) {
     const msg = state.activeSubtab === 'history' ? 'No history yet.' : 'Queue is empty.';
     list.innerHTML = `<li class="empty-state"><div class="text-4xl mb-2">📭</div><div>${msg}</div></li>`;
