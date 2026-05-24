@@ -6,6 +6,8 @@ export default async function globalSetup() {
   const page = await browser.newPage();
 
   await page.goto('http://localhost:3000');
+  // Wait for the async passkey-availability check to resolve and show the right section
+  await page.locator('#login-password').waitFor({ state: 'visible' });
   await page.fill('#login-password', process.env.TEST_PASSWORD ?? 'freaks');
   await page.click('#login-btn');
   await page.waitForSelector('header h1');
