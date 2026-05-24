@@ -153,10 +153,10 @@ LinkedIn access tokens last ~60 days and cannot be refreshed programmatically (w
 ## Tests
 
 ```bash
-npx playwright test
+TEST_PASSWORD=yourpassword npx playwright test
 ```
 
-Auth state is cached in `tests/.auth.json` after the first run. Test posts use a `[pw] ` commentary prefix and slots use time `22:22` as sentinel values for cleanup.
+`TEST_PASSWORD` must match your `OWNER_PASSWORD_HASH` in `.env`. Auth state is cached in `tests/.auth.json` after the first run. Test posts use a `[pw] ` commentary prefix and slots use time `22:22` as sentinel values for cleanup.
 
 ## Commands
 

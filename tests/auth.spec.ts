@@ -28,7 +28,7 @@ test('wrong password shows error', async ({ page }) => {
 test('correct password shows app and hides login screen', async ({ page }) => {
   await page.goto('/');
   await page.locator('#login-password').waitFor({ state: 'visible' });
-  await page.fill('#login-password', process.env.TEST_PASSWORD ?? 'freaks');
+  await page.fill('#login-password', process.env.TEST_PASSWORD!);
   await page.click('#login-btn');
   await expect(page.locator('#app')).toBeVisible();
   await expect(page.locator('#login-screen')).toBeHidden();
@@ -37,7 +37,7 @@ test('correct password shows app and hides login screen', async ({ page }) => {
 test('sign out returns to login screen', async ({ page }) => {
   await page.goto('/');
   await page.locator('#login-password').waitFor({ state: 'visible' });
-  await page.fill('#login-password', process.env.TEST_PASSWORD ?? 'freaks');
+  await page.fill('#login-password', process.env.TEST_PASSWORD!);
   await page.click('#login-btn');
   await expect(page.locator('#app')).toBeVisible();
   await page.click('#logout-btn');
